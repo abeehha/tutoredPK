@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TutoredPK API Tester</title>
+  <style>
+    :root { --bg:#0f1115; --panel:#171a21; --text:#e9edf5; --muted:#9aa6bd; --ok:#1db954; --err:#ff5f56; --accent:#4f8cff; --warn:#f0b429; }
+    * { box-sizing: border-box; font-family: Consolas, "Courier New", monospace; }
+    body { margin:0; background:var(--bg); color:var(--text); }
+    .wrap { max-width:1200px; margin:20px auto; padding:16px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .card { background:var(--panel); border:1px solid #252b36; border-radius:10px; padding:12px; }
+    h1 { margin:0 0 10px; font-size:20px; }
+    h2 { margin:0 0 10px; font-size:14px; color:var(--muted); }
+    label { display:block; margin:8px 0 4px; color:var(--muted); font-size:12px; }
+    input, select, textarea { width:100%; background:#0e1219; border:1px solid #2c3443; color:var(--text); padding:8px; border-radius:8px; }
+    textarea { min-height:92px; resize:vertical; }
+    button { margin-top:10px; background:var(--accent); color:white; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    button.secondary { background:#303848; }
+    button.warn { background:var(--warn); color:#111; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; }
+    .log { background:#0b0f15; border:1px solid #2a3140; border-radius:8px; padding:10px; white-space:pre-wrap; max-height:460px; overflow:auto; }
+    .ok { color:var(--ok); }
+    .err { color:var(--err); }
+    .full { grid-column:1 / -1; }
+    .small { font-size:12px; color:var(--muted); }
+    .hidden { display:none; }
+    .hint { font-size:11px; color:#8ab4ff; margin-top:5px; }
+    .pill { display:inline-block; margin-top:8px; padding:3px 8px; border-radius:999px; font-size:11px; background:#263043; color:#cfe1ff; }
+    .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .statbox { margin-top:10px; padding:10px; border:1px solid #2a3140; border-radius:8px; background:#0b0f15; }
+    .statline { font-size:12px; margin:3px 0; color:#d8e6ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>TutoredPK Temporary Tester</h1>
+    <p class="small">Temporary raw UI for Auth, RBAC, tutor subscription, and student booking escrow flow tests.</p>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Config</h2>
+        <label>Base URL</label>
+        <input id="baseUrl" value="http://localhost:4001" />
+        <label>Access Token</label>
+        <textarea id="token" placeholder="Token auto-fills after login"></textarea>
+        <div class="row">
+          <button class="secondary" id="saveToken">Save Token</button>
+          <button class="secondary" id="clearToken">Clear Token</button>
+        </div>
+        <div id="statusPill" class="pill">No status loaded</div>
+      </div>
+
+      <div class="card">
+        <h2>Register</h2>
+        <label>Email *</label>
+        <input id="regEmail" placeholder="yourname+test1@gmail.com" />
+        <label>Password *</label>
+        <input id="regPass" type="password" value="TestPass123!" />
+        <label>Role *</label>
+        <select id="regRole">
+          <option value="student">student</option>
+          <option value="tutor">tutor</option>
+          <option value="academy">academy</option>
+        </select>
+
+        <label>City *</label>
+        <input id="regCity" value="Lahore" />
+        <label>Country *</label>
+        <input id="regCountry" value="Pakistan" />
+
+        <div id="studentFields">
+          <label>Name *</label>
+          <input id="regStudentName" value="Student User" />
+          <label>Phone *</label>
+          <input id="regStudentPhone" value="03001234567" />
+        </div>
+
+        <div id="tutorFields" class="hidden">
+          <label>Name *</label>
+          <input id="regTutorName" value="Tutor User" />
+          <label>Education Level *</label>
+          <input id="regTutorEducation" value="BS Computer Science" />
+          <label>Teaching Mode *</label>
+          <select id="regTutorMode">
+            <option value="online">online</option>
+            <option value="physical">physical</option>
+            <option value="hybrid">hybrid</option>
+          </select>
+        </div>
+
+        <div id="academyFields" class="hidden">
+          <label>Academy Name *</label>
+          <input id="regAcademyName" value="Test Academy" />
+          <label>Owner Name *</label>
+          <input id="regOwnerName" value="Owner Test" />
+        </div>
+
+        <button id="registerBtn">Register</button>
+        <div class="hint">If email verification is enabled, click email link before login.</div>
+      </div>
+
+      <div class="card">
+        <h2>Login / Verify</h2>
+        <label>Email</label>
+        <input id="loginEmail" placeholder="same as register" />
+        <label>Password</label>
+        <input id="loginPass" type="password" value="TestPass123!" />
+        <div class="row">
+          <button id="loginBtn">Login</button>
+          <button class="secondary" id="resendBtn">Resend verification</button>
+        </div>
+        <div class="row">
+          <button class="secondary" id="meBtn">/auth/me</button>
+          <button class="secondary" id="rbacTutorBtn">RBAC tutor</button>
+          <button class="secondary" id="rbacAdminBtn">RBAC admin</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Subscription Flow (Tutor)</h2>
+        <div class="row">
+          <button class="secondary" id="plansBtn">Get plans</button>
+          <button class="secondary" id="statusBtn">Tutor status</button>
+        </div>
+        <div class="cols2">
+          <div>
+            <label>Top-up Amount</label>
+            <input id="topupAmount" type="number" value="5000" min="1" />
+          </div>
+          <div>
+            <label>Plan Type</label>
+            <select id="planType">
+              <option value="1m">1m</option>
+              <option value="3m">3m</option>
+              <option value="1y">1y</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <button class="warn" id="topupBtn">Top-up wallet</button>
+          <button id="purchaseBtn">Purchase plan</button>
+          <button class="secondary" id="fullFlowBtn">Run topup + purchase + status</button>
+        </div>
+        <div class="statbox">
+          <div class="statline">Simulated Withdrawal (Tutor)</div>
+          <div class="cols2">
+            <div>
+              <label>Withdraw Amount</label>
+              <input id="withdrawAmount" type="number" value="500" min="1" />
+            </div>
+            <div>
+              <label>Provider</label>
+              <select id="withdrawProvider">
+                <option value="bank">bank</option>
+                <option value="jazzcash">jazzcash</option>
+                <option value="easypaisa">easypaisa</option>
+              </select>
+            </div>
+          </div>
+          <label>Account Title</label>
+          <input id="withdrawAccountTitle" value="Tutor Name" />
+          <label>Account Number</label>
+          <input id="withdrawAccountNumber" value="03211234567" />
+          <label>Note (optional)</label>
+          <input id="withdrawNote" value="Simulation payout" />
+          <div class="row">
+            <button class="warn" id="withdrawRequestBtn">Request withdrawal</button>
+            <button class="secondary" id="withdrawMyBtn">My withdrawals</button>
+          </div>
+          <div class="statline" id="withdrawStat">Withdrawal status: -</div>
+        </div>
+        <div class="hint">Use tutor token. Endpoints are tutor-only.</div>
+        <div class="statbox">
+          <div class="statline" id="statWallet">Wallet: -</div>
+          <div class="statline" id="statActive">Active Subscription: -</div>
+          <div class="statline" id="statNext">Next Action: -</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Session Booking (Student)</h2>
+        <label>Student Token (optional override)</label>
+        <textarea id="studentToken" placeholder="Paste student token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForStudent">Use Global Token</button>
+        </div>
+        <div class="cols2">
+          <div>
+            <label>Student Top-up Amount</label>
+            <input id="studentTopupAmount" type="number" value="3000" min="1" />
+          </div>
+          <div>
+            <label>Session Date</label>
+            <input id="sessionDate" type="date" />
+          </div>
+        </div>
+        <div class="row">
+          <button class="warn" id="studentTopupBtn">Top-up student wallet</button>
+          <button class="secondary" id="tutorsBtn">Load tutors</button>
+        </div>
+        <label>Tutor (active subscription only)</label>
+        <select id="tutorSelect"></select>
+        <div class="row">
+          <button class="secondary" id="slotsBtn">Load slots</button>
+        </div>
+        <label>Slot</label>
+        <select id="slotSelect"></select>
+        <div class="row">
+          <button id="bookBtn">Book + hold payment</button>
+          <button class="secondary" id="studentBookingsBtn">My bookings</button>
+        </div>
+        <label>Student Booking ID</label>
+        <input id="studentBookingId" type="number" min="1" placeholder="Booking id for student confirm" />
+        <div class="row">
+          <button class="secondary" id="studentConfirmYesBtn">Student Confirm YES</button>
+          <button class="warn" id="studentConfirmNoBtn">Student Confirm NO (refund)</button>
+        </div>
+        <div class="hint">This block uses student token only.</div>
+        <div class="statbox">
+          <div class="statline" id="studentBookStat">Booking status: -</div>
+          <div class="statline" id="studentEscrow">Escrow: -</div>
+          <div class="statline" id="studentWallet">Student wallet: -</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Session Confirmation (Tutor)</h2>
+        <label>Tutor Token (optional override)</label>
+        <textarea id="tutorToken" placeholder="Paste tutor token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForTutor">Use Global Token</button>
+        </div>
+        <label>Tutor Booking ID</label>
+        <input id="tutorBookingId" type="number" min="1" placeholder="Booking id for tutor confirm" />
+        <div class="row">
+          <button class="secondary" id="tutorBookingsBtn">Tutor my bookings</button>
+          <button class="secondary" id="tutorConfirmYesBtn">Tutor Confirm YES</button>
+          <button class="warn" id="tutorConfirmNoBtn">Tutor Confirm NO (refund)</button>
+        </div>
+        <div class="hint">This block uses tutor token only.</div>
+        <div class="statbox">
+          <div class="statline" id="tutorBookStat">Booking status: -</div>
+          <div class="statline" id="tutorEscrow">Escrow: -</div>
+          <div class="statline" id="tutorAction">Last action: -</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Admin Withdrawal Review</h2>
+        <label>Admin Token (optional override)</label>
+        <textarea id="adminToken" placeholder="Paste admin token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForAdmin">Use Global Token</button>
+        </div>
+        <label>Withdrawal ID</label>
+        <input id="adminWithdrawalId" type="number" min="1" placeholder="Enter withdrawal id" />
+        <label>Review Note (optional)</label>
+        <input id="adminReviewNote" value="Reviewed by admin (simulation)" />
+        <div class="row">
+          <button class="secondary" id="adminLoadPendingBtn">Load pending (latest)</button>
+          <button class="secondary" id="adminApproveBtn">Approve</button>
+          <button class="warn" id="adminRejectBtn">Reject + refund</button>
+        </div>
+        <div class="hint">Admin uses /api/v1/withdrawals/admin/:id/review endpoint.</div>
+        <div class="statbox">
+          <div class="statline" id="adminWithdrawStat">Admin withdrawal action: -</div>
+        </div>
+      </div>
+
+      <div class="card full">
+        <h2>Response Log</h2>
+        <div id="log" class="log"></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const log = (title, data, isError=false) => {
+  const el = $("log");
+  const t = new Date().toLocaleTimeString();
+  const cls = isError ? "err" : "ok";
+  const line = `[${t}] ${title}\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}\n\n`;
+  const div = document.createElement('div');
+  div.className = cls;
+  div.textContent = line;
+  el.prepend(div);
+};
+
+const setStatus = (text) => { $("statusPill").textContent = text; };
+const setStatText = (id, text) => { $(id).textContent = text; };
+const getBase = () => $("baseUrl").value.trim().replace(/\/$/, '');
+const getToken = () => $("token").value.trim();
+const setToken = (token) => {
+  $("token").value = token || "";
+  localStorage.setItem("authTesterToken", token || "");
+};
+
+function setRoleUI(role) {
+  $("studentFields").classList.toggle("hidden", role !== "student");
+  $("tutorFields").classList.toggle("hidden", role !== "tutor");
+  $("academyFields").classList.toggle("hidden", role !== "academy");
+}
+
+function buildRegisterPayload() {
+  const role = $("regRole").value;
+  const payload = {
+    email: $("regEmail").value.trim().toLowerCase(),
+    password: $("regPass").value,
+    role,
+    city: $("regCity").value.trim(),
+    country: $("regCountry").value.trim(),
+  };
+
+  if (role === "student") {
+    payload.name = $("regStudentName").value.trim();
+    payload.phone = $("regStudentPhone").value.trim();
+  } else if (role === "tutor") {
+    payload.name = $("regTutorName").value.trim();
+    payload.education_level = $("regTutorEducation").value.trim();
+    payload.teaching_mode = $("regTutorMode").value;
+  } else if (role === "academy") {
+    payload.academy_name = $("regAcademyName").value.trim();
+    payload.owner_name = $("regOwnerName").value.trim();
+  }
+
+  return payload;
+}
+
+async function api(path, method='GET', body=null, auth=false, tokenOverride="") {
+  const headers = { 'Content-Type': 'application/json' };
+  const token = auth ? (tokenOverride || getToken()) : "";
+  if (auth && token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${getBase()}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = text; }
+  if (!res.ok) throw { status: res.status, data };
+  return { status: res.status, data };
+}
+
+async function call(path, name, opts = {}) {
+  try {
+    const r = await api(path, opts.method || 'GET', opts.body || null, Boolean(opts.auth), opts.token || "");
+    log(`${name} ${r.status}`, r.data);
+    return r.data;
+  } catch (e) {
+    log(`${name} ${e.status || 'ERR'}`, e.data || e, true);
+    throw e;
+  }
+}
+
+const getScopedToken = (id) => ($(id).value.trim() || getToken());
+
+function renderTutorStatusPayload(payload) {
+  const d = payload?.data || {};
+  const wallet = d.wallet?.balance;
+  const active = d.active_subscription;
+  const next = d.next_action || "unknown";
+
+  setStatText("statWallet", `Wallet: ${wallet ?? "-"} PKR`);
+  setStatText(
+    "statActive",
+    active
+      ? `Active Subscription: ${active.plan_type} (${new Date(active.start_at || active.start_date).toLocaleString()} -> ${new Date(active.end_at || active.end_date).toLocaleString()})`
+      : "Active Subscription: none"
+  );
+  setStatText("statNext", `Next Action: ${next}`);
+  setStatus(`Tutor status: ${next}`);
+}
+
+function renderTutorOptions(payload) {
+  const list = payload?.data?.tutors || [];
+  const sel = $("tutorSelect");
+  sel.innerHTML = "";
+
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No subscribed tutor found";
+    sel.appendChild(opt);
+    return;
+  }
+
+  list.forEach((t) => {
+    const opt = document.createElement("option");
+    opt.value = String(t.tutor_id);
+    opt.textContent = `#${t.tutor_id} ${t.name || "Tutor"} (${t.plan_type})`;
+    sel.appendChild(opt);
+  });
+}
+
+function renderSlotOptions(payload) {
+  const slots = payload?.data?.slots || [];
+  const sel = $("slotSelect");
+  sel.innerHTML = "";
+
+  if (!slots.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No slots";
+    sel.appendChild(opt);
+    return;
+  }
+
+  slots.forEach((s) => {
+    const opt = document.createElement("option");
+    opt.value = s.slot_id;
+    opt.textContent = `${s.slot_id} | ${s.start_time}-${s.end_time} | ${s.is_available ? "available" : "booked"}`;
+    opt.disabled = !s.is_available;
+    sel.appendChild(opt);
+  });
+}
+
+function renderBookingResult(payload, scope) {
+  const data = payload?.data || {};
+  const booking = data.booking || {};
+  const wallet = data.student_wallet || {};
+  const isStudent = scope === "student";
+
+  if (isStudent) {
+    setStatText("studentBookStat", `Booking status: ${booking.booking_status || data.action || "-"}`);
+    setStatText("studentEscrow", `Escrow: ${booking.escrow_status || data.escrow_status || "-"}`);
+    if (wallet.balance_after !== undefined) {
+      setStatText("studentWallet", `Student wallet: ${wallet.balance_after} PKR`);
+    }
+  } else {
+    setStatText("tutorBookStat", `Booking status: ${booking.booking_status || data.booking_status || "-"}`);
+    setStatText("tutorEscrow", `Escrow: ${booking.escrow_status || data.escrow_status || "-"}`);
+    setStatText("tutorAction", `Last action: ${data.action || "-"}`);
+  }
+
+  if (booking.booking_id) {
+    if (isStudent) {
+      $("studentBookingId").value = booking.booking_id;
+    }
+    $("tutorBookingId").value = booking.booking_id;
+  } else if (data.booking_id) {
+    if (isStudent) {
+      $("studentBookingId").value = data.booking_id;
+    }
+    $("tutorBookingId").value = data.booking_id;
+  }
+}
+
+async function refreshTutorStatus() {
+  const payload = await call("/api/v1/subscriptions/tutor/status", "STATUS", {
+    auth: true,
+    token: getScopedToken("tutorToken")
+  });
+  renderTutorStatusPayload(payload);
+}
+
+$("saveToken").onclick = () => { setToken(getToken()); setStatus("Token saved"); log("TOKEN", { saved: true }); };
+$("clearToken").onclick = () => { setToken(""); setStatus("Token cleared"); log("TOKEN", { cleared: true }); };
+
+$("regRole").onchange = () => setRoleUI($("regRole").value);
+
+$("registerBtn").onclick = async () => {
+  const payload = buildRegisterPayload();
+  const data = await call('/api/v1/auth/register', 'REGISTER', { method:'POST', body:payload });
+  if (!$("loginEmail").value) $("loginEmail").value = payload.email;
+  if (data?.data?.email_confirmation_required) setStatus('Signup pending verification');
+};
+
+$("loginBtn").onclick = async () => {
+  const payload = {
+    email: $("loginEmail").value.trim().toLowerCase(),
+    password: $("loginPass").value,
+  };
+  const data = await call('/api/v1/auth/login', 'LOGIN', { method:'POST', body:payload });
+  const token = data?.data?.access_token;
+  if (token) {
+    setToken(token);
+    setStatus('Logged in, token loaded');
+  }
+};
+
+$("resendBtn").onclick = async () => {
+  await call('/api/v1/auth/resend-verification', 'RESEND', {
+    method:'POST',
+    body:{ email: $("loginEmail").value.trim().toLowerCase() }
+  });
+};
+
+$("meBtn").onclick = () => call('/api/v1/auth/me', 'ME', { auth:true });
+$("rbacTutorBtn").onclick = () => call('/api/v1/auth/rbac/tutor', 'RBAC_TUTOR', { auth:true });
+$("rbacAdminBtn").onclick = () => call('/api/v1/auth/rbac/admin', 'RBAC_ADMIN', { auth:true });
+
+$("plansBtn").onclick = () => call('/api/v1/subscriptions/plans', 'PLANS');
+$("statusBtn").onclick = () => refreshTutorStatus();
+
+$("topupBtn").onclick = async () => {
+  await call('/api/v1/subscriptions/tutor/topup', 'TOPUP', {
+    method:'POST',
+    auth:true,
+    token: getScopedToken("tutorToken"),
+    body:{ amount: Number($("topupAmount").value) }
+  });
+  await refreshTutorStatus();
+};
+
+$("purchaseBtn").onclick = async () => {
+  await call('/api/v1/subscriptions/tutor/purchase', 'PURCHASE', {
+    method:'POST',
+    auth:true,
+    token: getScopedToken("tutorToken"),
+    body:{ plan_type: $("planType").value }
+  });
+  await refreshTutorStatus();
+};
+
+$("fullFlowBtn").onclick = async () => {
+  await call('/api/v1/subscriptions/tutor/topup', 'TOPUP', {
+    method:'POST',
+    auth:true,
+    token: getScopedToken("tutorToken"),
+    body:{ amount: Number($("topupAmount").value) }
+  });
+  await call('/api/v1/subscriptions/tutor/purchase', 'PURCHASE', {
+    method:'POST',
+    auth:true,
+    token: getScopedToken("tutorToken"),
+    body:{ plan_type: $("planType").value }
+  });
+  await refreshTutorStatus();
+  setStatus("Flow done: status refreshed");
+};
+
+$("withdrawRequestBtn").onclick = async () => {
+  const payload = await call('/api/v1/withdrawals/request', 'WITHDRAW_REQUEST', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("tutorToken"),
+    body: {
+      amount: Number($("withdrawAmount").value),
+      provider: $("withdrawProvider").value,
+      account_title: $("withdrawAccountTitle").value.trim(),
+      account_number: $("withdrawAccountNumber").value.trim(),
+      destination_note: $("withdrawNote").value.trim()
+    }
+  });
+
+  const status = payload?.data?.withdrawal?.status || "-";
+  const after = payload?.data?.wallet?.balance_after;
+  setStatText("withdrawStat", `Withdrawal status: ${status}${after !== undefined ? ` | wallet: ${after} PKR` : ""}`);
+  await refreshTutorStatus();
+};
+
+$("withdrawMyBtn").onclick = async () => {
+  const payload = await call('/api/v1/withdrawals/my', 'WITHDRAW_MY', {
+    auth: true,
+    token: getScopedToken("tutorToken")
+  });
+  const first = payload?.data?.withdrawals?.[0];
+  if (first) {
+    setStatText("withdrawStat", `Withdrawal status: ${first.status} | amount: ${first.amount} | provider: ${first.provider}`);
+  }
+};
+
+$("useGlobalForStudent").onclick = () => { $("studentToken").value = getToken(); };
+$("useGlobalForTutor").onclick = () => { $("tutorToken").value = getToken(); };
+$("useGlobalForAdmin").onclick = () => { $("adminToken").value = getToken(); };
+$("studentToken").oninput = () => localStorage.setItem("authTesterStudentToken", $("studentToken").value.trim());
+$("tutorToken").oninput = () => localStorage.setItem("authTesterTutorToken", $("tutorToken").value.trim());
+$("adminToken").oninput = () => localStorage.setItem("authTesterAdminToken", $("adminToken").value.trim());
+
+$("studentTopupBtn").onclick = async () => {
+  const payload = await call("/api/v1/sessions/student/topup", "STUDENT_TOPUP", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("studentToken"),
+    body: { amount: Number($("studentTopupAmount").value) }
+  });
+  const after = payload?.data?.balance_after;
+  if (after !== undefined) {
+    setStatText("studentWallet", `Student wallet: ${after} PKR`);
+  }
+};
+
+$("tutorsBtn").onclick = async () => {
+  const payload = await call("/api/v1/sessions/tutors", "TUTORS", {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  renderTutorOptions(payload);
+};
+
+$("slotsBtn").onclick = async () => {
+  const tutorId = $("tutorSelect").value;
+  const date = $("sessionDate").value;
+  const payload = await call(`/api/v1/sessions/tutors/${tutorId}/slots?date=${date}`, "SLOTS", {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  renderSlotOptions(payload);
+};
+
+$("bookBtn").onclick = async () => {
+  const payload = await call("/api/v1/sessions/bookings", "BOOK", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("studentToken"),
+    body: {
+      tutor_id: Number($("tutorSelect").value),
+      date: $("sessionDate").value,
+      slot_id: $("slotSelect").value
+    }
+  });
+  renderBookingResult(payload, "student");
+};
+
+$("studentBookingsBtn").onclick = async () => {
+  const payload = await call("/api/v1/sessions/bookings/my", "STUDENT_MY_BOOKINGS", {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  const first = payload?.data?.bookings?.[0];
+  if (first) {
+    setStatText("studentBookStat", `Booking status: ${first.booking_status}`);
+    setStatText("studentEscrow", `Escrow: ${first.escrow_status}`);
+    $("studentBookingId").value = first.booking_id;
+    $("tutorBookingId").value = first.booking_id;
+  }
+};
+
+$("studentConfirmYesBtn").onclick = async () => {
+  const bookingId = Number($("studentBookingId").value);
+  const payload = await call(`/api/v1/sessions/bookings/${bookingId}/confirm`, "CONFIRM_YES", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("studentToken"),
+    body: { confirmed: true }
+  });
+  renderBookingResult(payload, "student");
+};
+
+$("studentConfirmNoBtn").onclick = async () => {
+  const bookingId = Number($("studentBookingId").value);
+  const payload = await call(`/api/v1/sessions/bookings/${bookingId}/confirm`, "STUDENT_CONFIRM_NO", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("studentToken"),
+    body: { confirmed: false }
+  });
+  renderBookingResult(payload, "student");
+};
+
+$("tutorBookingsBtn").onclick = async () => {
+  const payload = await call("/api/v1/sessions/bookings/my", "TUTOR_MY_BOOKINGS", {
+    auth: true,
+    token: getScopedToken("tutorToken")
+  });
+  const first = payload?.data?.bookings?.[0];
+  if (first) {
+    setStatText("tutorBookStat", `Booking status: ${first.booking_status}`);
+    setStatText("tutorEscrow", `Escrow: ${first.escrow_status}`);
+    setStatText("tutorAction", `Last action: from my bookings`);
+    $("tutorBookingId").value = first.booking_id;
+  }
+};
+
+$("tutorConfirmYesBtn").onclick = async () => {
+  const bookingId = Number($("tutorBookingId").value);
+  const payload = await call(`/api/v1/sessions/bookings/${bookingId}/confirm`, "TUTOR_CONFIRM_YES", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("tutorToken"),
+    body: { confirmed: true }
+  });
+  renderBookingResult(payload, "tutor");
+};
+
+$("tutorConfirmNoBtn").onclick = async () => {
+  const bookingId = Number($("tutorBookingId").value);
+  const payload = await call(`/api/v1/sessions/bookings/${bookingId}/confirm`, "TUTOR_CONFIRM_NO", {
+    method: "POST",
+    auth: true,
+    token: getScopedToken("tutorToken"),
+    body: { confirmed: false }
+  });
+  renderBookingResult(payload, "tutor");
+};
+
+$("adminLoadPendingBtn").onclick = async () => {
+  const payload = await call('/api/v1/withdrawals/admin/pending', 'ADMIN_WITHDRAW_PENDING', {
+    auth: true,
+    token: getScopedToken("adminToken")
+  });
+  const first = payload?.data?.withdrawals?.[0];
+  if (first) {
+    $("adminWithdrawalId").value = first.withdrawal_id;
+    setStatText("adminWithdrawStat", `Admin withdrawal action: pending #${first.withdrawal_id} amount=${first.amount}`);
+  } else {
+    setStatText("adminWithdrawStat", "Admin withdrawal action: no pending requests");
+  }
+};
+
+$("adminApproveBtn").onclick = async () => {
+  const id = Number($("adminWithdrawalId").value);
+  const payload = await call(`/api/v1/withdrawals/admin/${id}/review`, "ADMIN_WITHDRAW_APPROVE", {
+    method: "PATCH",
+    auth: true,
+    token: getScopedToken("adminToken"),
+    body: {
+      decision: "approved",
+      review_note: $("adminReviewNote").value.trim()
+    }
+  });
+  const action = payload?.data?.action || "-";
+  setStatText("adminWithdrawStat", `Admin withdrawal action: ${action} (id=${id})`);
+};
+
+$("adminRejectBtn").onclick = async () => {
+  const id = Number($("adminWithdrawalId").value);
+  const payload = await call(`/api/v1/withdrawals/admin/${id}/review`, "ADMIN_WITHDRAW_REJECT", {
+    method: "PATCH",
+    auth: true,
+    token: getScopedToken("adminToken"),
+    body: {
+      decision: "rejected",
+      review_note: $("adminReviewNote").value.trim()
+    }
+  });
+  const action = payload?.data?.action || "-";
+  setStatText("adminWithdrawStat", `Admin withdrawal action: ${action} (id=${id})`);
+};
+
+(function init(){
+  const saved = localStorage.getItem('authTesterToken');
+  if (saved) $("token").value = saved;
+  const savedStudent = localStorage.getItem("authTesterStudentToken");
+  const savedTutor = localStorage.getItem("authTesterTutorToken");
+  const savedAdmin = localStorage.getItem("authTesterAdminToken");
+  if (savedStudent) $("studentToken").value = savedStudent;
+  if (savedTutor) $("tutorToken").value = savedTutor;
+  if (savedAdmin) $("adminToken").value = savedAdmin;
+  if (!$("sessionDate").value) {
+    const tomorrow = new Date(Date.now() + 86400000);
+    $("sessionDate").value = tomorrow.toISOString().slice(0, 10);
+  }
+  setRoleUI($("regRole").value);
+})();
+</script>
+</body>
+</html>

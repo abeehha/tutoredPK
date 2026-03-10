@@ -1,0 +1,548 @@
+openapi: 3.0.3
+info:
+  title: TutoredPK Backend API
+  version: 1.0.0
+  description: Step 1-2 auth and RBAC endpoints.
+servers:
+  - url: http://localhost:4001
+    description: Local
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        role:
+          type: string
+          enum: [student, tutor, academy]
+        name:
+          type: string
+        academy_name:
+          type: string
+        city:
+          type: string
+        country:
+          type: string
+        phone:
+          type: string
+        bio:
+          type: string
+        education_level:
+          type: string
+        education_history:
+          type: string
+        work_history:
+          type: string
+        teaching_mode:
+          type: string
+          enum: [online, physical, hybrid]
+        profile_picture_url:
+          type: string
+        description:
+          type: string
+        logo_url:
+          type: string
+        about:
+          type: string
+        founded_year:
+          type: integer
+        owner_name:
+          type: string
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    SubscriptionPurchaseRequest:
+      type: object
+      required: [plan_type]
+      properties:
+        plan_type:
+          type: string
+          enum: [1m, 3m, 1y]
+        start_date:
+          type: string
+          format: date
+    StudentTopupRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+    BookSessionRequest:
+      type: object
+      required: [tutor_id, date, slot_id]
+      properties:
+        tutor_id:
+          type: integer
+        date:
+          type: string
+          format: date
+        slot_id:
+          type: string
+          enum: [s1, s2, s3, s4]
+    ConfirmSessionRequest:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed:
+          type: boolean
+    WithdrawalRequest:
+      type: object
+      required: [amount, provider, account_title, account_number]
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+        provider:
+          type: string
+          enum: [bank, jazzcash, easypaisa]
+        account_title:
+          type: string
+        account_number:
+          type: string
+        destination_note:
+          type: string
+    WithdrawalReviewRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approved, rejected]
+        review_note:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              nullable: true
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register user via Supabase and create local role profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Registered
+        '400':
+          description: Validation or Supabase signup failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Duplicate backend email
+  /api/v1/auth/login:
+    post:
+      summary: Login via Supabase email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/resend-verification:
+    post:
+      summary: Resend email verification link via Supabase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Verification email resent
+        '400':
+          description: Validation error or resend failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/me:
+    get:
+      summary: Get current user from token + local role profile
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Current user
+        '401':
+          description: Missing or invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/rbac/student:
+    get:
+      summary: RBAC test route for student
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Allowed
+        '403':
+          description: Forbidden
+  /api/v1/auth/rbac/tutor:
+    get:
+      summary: RBAC test route for tutor
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Allowed
+        '403':
+          description: Forbidden
+  /api/v1/auth/rbac/academy:
+    get:
+      summary: RBAC test route for academy
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Allowed
+        '403':
+          description: Forbidden
+  /api/v1/auth/rbac/admin:
+    get:
+      summary: RBAC test route for admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Allowed
+        '403':
+          description: Forbidden
+  /api/v1/subscriptions/tutor/purchase:
+    post:
+      summary: Purchase tutor subscription (transactional)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPurchaseRequest'
+      responses:
+        '201':
+          description: Subscription purchased and wallet deducted
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+        '409':
+          description: Insufficient balance
+  /api/v1/subscriptions/plans:
+    get:
+      summary: List available tutor subscription plans
+      responses:
+        '200':
+          description: Plans fetched
+  /api/v1/subscriptions/tutor/status:
+    get:
+      summary: Get tutor wallet and active-subscription status with next action hint
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tutor status fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+  /api/v1/subscriptions/tutor/topup:
+    post:
+      summary: Demo wallet top-up for tutor testing flow
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  minimum: 0.01
+      responses:
+        '201':
+          description: Wallet topped up
+        '400':
+          description: Invalid top-up amount
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+  /api/v1/subscriptions/tutor/my:
+    get:
+      summary: Get tutor wallet and subscription history
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tutor subscriptions fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+  /api/v1/sessions/slots/catalog:
+    get:
+      summary: Get fixed slot catalog and per-session price
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Slot catalog fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non student/tutor roles
+  /api/v1/sessions/tutors:
+    get:
+      summary: List tutors with active subscriptions (student booking list)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tutors fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student roles
+  /api/v1/sessions/tutors/{tutorId}/slots:
+    get:
+      summary: Get tutor slots for a specific date with booked/unbooked state
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: tutorId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Slot availability fetched
+        '400':
+          description: Invalid tutor id or date
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student roles
+  /api/v1/sessions/student/topup:
+    post:
+      summary: Demo top-up for student wallet (testing)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentTopupRequest'
+      responses:
+        '201':
+          description: Wallet topped up
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student role
+  /api/v1/sessions/bookings:
+    post:
+      summary: Book tutor session and hold payment in escrow
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookSessionRequest'
+      responses:
+        '201':
+          description: Session booked and payment held
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student role
+        '404':
+          description: Tutor or student profile not found
+        '409':
+          description: Insufficient balance or slot already booked
+  /api/v1/sessions/bookings/my:
+    get:
+      summary: Get bookings for logged-in student or tutor
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Bookings fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non student/tutor role
+  /api/v1/sessions/bookings/{bookingId}/confirm:
+    post:
+      summary: Confirm session outcome (release or refund escrow transactionally)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmSessionRequest'
+      responses:
+        '200':
+          description: Confirmation processed
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden or not booking owner
+        '404':
+          description: Booking/profile/wallet not found
+  /api/v1/withdrawals/request:
+    post:
+      summary: Tutor requests simulated withdrawal to personal account destination
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequest'
+      responses:
+        '201':
+          description: Withdrawal request created and wallet amount reserved
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+        '409':
+          description: Insufficient wallet balance
+  /api/v1/withdrawals/my:
+    get:
+      summary: List tutor withdrawal requests
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Withdrawals fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-tutor role
+  /api/v1/withdrawals/admin/pending:
+    get:
+      summary: Admin list of pending withdrawal requests
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Pending withdrawals fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-admin role
+  /api/v1/withdrawals/admin/{withdrawalId}/review:
+    patch:
+      summary: Admin review simulated withdrawal request (approve or reject/refund)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: withdrawalId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalReviewRequest'
+      responses:
+        '200':
+          description: Review processed
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-admin role
+        '404':
+          description: Withdrawal/admin profile not found
+        '409':
+          description: Withdrawal already reviewed

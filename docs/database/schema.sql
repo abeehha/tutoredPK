@@ -203,9 +203,12 @@ CREATE TABLE subscriptions (
     tutor_id        INTEGER REFERENCES tutors(tutor_id),
     academy_id      INTEGER REFERENCES academies(academy_id),
     plan_type       VARCHAR(20) NOT NULL CHECK (plan_type IN ('1m','3m','1y')),
+    start_at        TIMESTAMP,
+    end_at          TIMESTAMP,
     start_date      DATE NOT NULL,
     end_date        DATE NOT NULL,
     is_active       BOOLEAN DEFAULT TRUE,
+    CHECK (end_at IS NULL OR start_at IS NULL OR end_at > start_at),
     CHECK (end_date > start_date)
 );
 
