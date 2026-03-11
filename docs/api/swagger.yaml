@@ -128,6 +128,34 @@ components:
           enum: [approved, rejected]
         review_note:
           type: string
+    AcademyEnrollRequest:
+      type: object
+      required: [academy_id, course_id]
+      properties:
+        academy_id:
+          type: integer
+        course_id:
+          type: integer
+    ChatSendRequest:
+      type: object
+      required: [receiver_account_id, content]
+      properties:
+        receiver_account_id:
+          type: integer
+        content:
+          type: string
+    ReviewCreateRequest:
+      type: object
+      required: [booking_id, rating]
+      properties:
+        booking_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
     ErrorResponse:
       type: object
       properties:
@@ -336,6 +364,61 @@ paths:
           description: Missing or invalid token
         '403':
           description: Forbidden for non-tutor role
+  /api/v1/subscriptions/academy/status:
+    get:
+      summary: Get academy wallet and active monthly-subscription status
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Academy status fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-academy role
+  /api/v1/subscriptions/academy/topup:
+    post:
+      summary: Demo top-up for academy wallet testing
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  minimum: 0.01
+      responses:
+        '201':
+          description: Wallet topped up
+  /api/v1/subscriptions/academy/purchase:
+    post:
+      summary: Purchase academy monthly subscription (fixed 20k)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionPurchaseRequest'
+      responses:
+        '201':
+          description: Academy subscription purchased
+        '409':
+          description: Insufficient balance
+  /api/v1/subscriptions/academy/my:
+    get:
+      summary: Get academy wallet and subscription history
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Academy subscriptions fetched
   /api/v1/sessions/slots/catalog:
     get:
       summary: Get fixed slot catalog and per-session price
@@ -546,3 +629,245 @@ paths:
           description: Withdrawal/admin profile not found
         '409':
           description: Withdrawal already reviewed
+  /api/v1/academies/list:
+    get:
+      summary: Student list of academies with active subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Academies fetched
+  /api/v1/academies/{academyId}/courses:
+    get:
+      summary: Student list of selected academy courses
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: academyId
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Courses fetched
+  /api/v1/academies/enroll:
+    post:
+      summary: Student enroll in academy course with fixed fee 1000
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademyEnrollRequest'
+      responses:
+        '201':
+          description: Enrollment created and payment completed
+        '409':
+          description: Balance/course-seat/duplicate conflict
+  /api/v1/academies/enrollments/my:
+    get:
+      summary: Student or academy list enrollments
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Enrollments fetched
+  /api/v1/chat/messages:
+    post:
+      summary: Send chat message (allowed only student-tutor or student-academy)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatSendRequest'
+      responses:
+        '201':
+          description: Message sent
+        '400':
+          description: Validation error
+        '403':
+          description: Chat pair not allowed
+  /api/v1/chat/conversations:
+    get:
+      summary: List conversations for logged in account
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conversations fetched
+  /api/v1/chat/messages/{peerAccountId}:
+    get:
+      summary: Get thread messages with peer account
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: peerAccountId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Thread fetched
+        '403':
+          description: Chat pair not allowed
+  /api/v1/reviews:
+    post:
+      summary: Student submits review for completed tutor session
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreateRequest'
+      responses:
+        '201':
+          description: Review created and tutor rating summary updated
+        '400':
+          description: Validation error or non-tutor booking
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student role or non-owner booking
+        '404':
+          description: Booking or student profile not found
+        '409':
+          description: Session not completed yet or review already exists
+  /api/v1/reviews/my:
+    get:
+      summary: Get my reviews (student submitted or tutor received)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Reviews fetched
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non student/tutor role
+  /api/v1/discovery/tutors:
+    get:
+      summary: Student discovery list of tutors with filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: subject
+          schema:
+            type: string
+        - in: query
+          name: location
+          schema:
+            type: string
+        - in: query
+          name: teaching_mode
+          schema:
+            type: string
+            enum: [online, physical, hybrid]
+        - in: query
+          name: min_rating
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+        - in: query
+          name: min_price
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: max_price
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Tutors fetched with filters
+        '400':
+          description: Invalid filters
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student role
+  /api/v1/discovery/academies:
+    get:
+      summary: Student discovery list of academies with filters
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: subject
+          schema:
+            type: string
+        - in: query
+          name: location
+          schema:
+            type: string
+        - in: query
+          name: min_rating
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+        - in: query
+          name: min_price
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: max_price
+          schema:
+            type: number
+            minimum: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Academies fetched with filters
+        '400':
+          description: Invalid filters
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-student role

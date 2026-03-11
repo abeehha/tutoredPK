@@ -31,15 +31,36 @@
     .cols2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .statbox { margin-top:10px; padding:10px; border:1px solid #2a3140; border-radius:8px; background:#0b0f15; }
     .statline { font-size:12px; margin:3px 0; color:#d8e6ff; }
+    .toolbar { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    .chip { background:#222a38; color:#d9e5ff; border:1px solid #38445b; border-radius:999px; padding:6px 10px; font-size:12px; cursor:pointer; }
+    .chip.active { background:#4f8cff; border-color:#4f8cff; color:#fff; }
+    .step { margin-top:10px; font-size:11px; color:#9dc1ff; text-transform:uppercase; letter-spacing:.04em; }
+    @media (max-width: 960px) { .grid { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>TutoredPK Temporary Tester</h1>
     <p class="small">Temporary raw UI for Auth, RBAC, tutor subscription, and student booking escrow flow tests.</p>
+    <div class="toolbar">
+      <a class="chip" href="./auth-tester.html">Master</a>
+      <a class="chip" href="./student-tester.html">Student Page</a>
+      <a class="chip" href="./tutor-tester.html">Tutor Page</a>
+      <a class="chip" href="./academy-tester.html">Academy Page</a>
+      <a class="chip" href="./admin-tester.html">Admin Page</a>
+    </div>
+    <div class="toolbar" id="modeBar">
+      <button class="chip active" data-mode="all">All</button>
+      <button class="chip" data-mode="auth">Auth</button>
+      <button class="chip" data-mode="student">Student</button>
+      <button class="chip" data-mode="tutor">Tutor</button>
+      <button class="chip" data-mode="academy">Academy</button>
+      <button class="chip" data-mode="admin">Admin</button>
+      <button class="chip" data-mode="chat">Chat</button>
+    </div>
 
     <div class="grid">
-      <div class="card">
+      <div class="card" data-mode="all,auth">
         <h2>Config</h2>
         <label>Base URL</label>
         <input id="baseUrl" value="http://localhost:4001" />
@@ -52,7 +73,7 @@
         <div id="statusPill" class="pill">No status loaded</div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,auth">
         <h2>Register</h2>
         <label>Email *</label>
         <input id="regEmail" placeholder="yourname+test1@gmail.com" />
@@ -101,7 +122,7 @@
         <div class="hint">If email verification is enabled, click email link before login.</div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,auth">
         <h2>Login / Verify</h2>
         <label>Email</label>
         <input id="loginEmail" placeholder="same as register" />
@@ -118,7 +139,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,tutor">
         <h2>Subscription Flow (Tutor)</h2>
         <div class="row">
           <button class="secondary" id="plansBtn">Get plans</button>
@@ -179,8 +200,66 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,academy,student">
+        <h2>Academy Flow</h2>
+        <div class="step">Step 1: Academy Subscription</div>
+        <label>Academy Token (optional override)</label>
+        <textarea id="academyToken" placeholder="Paste academy token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForAcademy">Use Global Token</button>
+        </div>
+        <div class="cols2">
+          <div>
+            <label>Academy Top-up Amount</label>
+            <input id="academyTopupAmount" type="number" value="25000" min="1" />
+          </div>
+          <div>
+            <label>Plan Type</label>
+            <select id="academyPlanType">
+              <option value="1m">1m (fixed 20k)</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <button class="warn" id="academyTopupBtn">Top-up academy wallet</button>
+          <button id="academyPurchaseBtn">Purchase academy plan</button>
+          <button class="secondary" id="academyStatusBtn">Academy status</button>
+          <button class="secondary" id="academySeedCoursesBtn">Add 10 demo courses</button>
+        </div>
+        <div class="statbox">
+          <div class="statline" id="academyWalletStat">Academy wallet: -</div>
+          <div class="statline" id="academySubStat">Academy subscription: -</div>
+        </div>
+
+        <div class="step">Step 2: Student Enrollment</div>
+        <label>Student Token for Academy Enrollment</label>
+        <textarea id="academyStudentToken" placeholder="Paste student token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForAcademyStudent">Use Global Token</button>
+        </div>
+        <div class="row">
+          <button class="secondary" id="academyListBtn">Load academies</button>
+        </div>
+        <label>Academy</label>
+        <select id="academySelect"></select>
+        <div class="row">
+          <button class="secondary" id="academyCoursesBtn" disabled>Load courses</button>
+        </div>
+        <label>Course</label>
+        <select id="academyCourseSelect"></select>
+        <div class="row">
+          <button id="academyEnrollBtn" disabled>Enroll (1000)</button>
+          <button class="secondary" id="academyMyEnrollmentsBtn">My enrollments</button>
+        </div>
+        <div class="statbox">
+          <div class="statline" id="academyEnrollStat">Enrollment status: -</div>
+          <div class="statline" id="academyStudentWalletStat">Student wallet (academy flow): -</div>
+        </div>
+      </div>
+
+      <div class="card" data-mode="all,student">
         <h2>Session Booking (Student)</h2>
+        <div class="step">Step 1: Top up student wallet</div>
         <label>Student Token (optional override)</label>
         <textarea id="studentToken" placeholder="Paste student token or use global token"></textarea>
         <div class="row">
@@ -198,24 +277,24 @@
         </div>
         <div class="row">
           <button class="warn" id="studentTopupBtn">Top-up student wallet</button>
-          <button class="secondary" id="tutorsBtn">Load tutors</button>
+          <button class="secondary" id="tutorsBtn" disabled>Step 2: Load tutors</button>
         </div>
         <label>Tutor (active subscription only)</label>
         <select id="tutorSelect"></select>
         <div class="row">
-          <button class="secondary" id="slotsBtn">Load slots</button>
+          <button class="secondary" id="slotsBtn" disabled>Step 3: Load slots</button>
         </div>
         <label>Slot</label>
         <select id="slotSelect"></select>
         <div class="row">
-          <button id="bookBtn">Book + hold payment</button>
+          <button id="bookBtn" disabled>Step 4: Book + hold payment</button>
           <button class="secondary" id="studentBookingsBtn">My bookings</button>
         </div>
         <label>Student Booking ID</label>
         <input id="studentBookingId" type="number" min="1" placeholder="Booking id for student confirm" />
         <div class="row">
-          <button class="secondary" id="studentConfirmYesBtn">Student Confirm YES</button>
-          <button class="warn" id="studentConfirmNoBtn">Student Confirm NO (refund)</button>
+          <button class="secondary" id="studentConfirmYesBtn" disabled>Step 5: Student Confirm YES</button>
+          <button class="warn" id="studentConfirmNoBtn" disabled>Step 5: Student Confirm NO (refund)</button>
         </div>
         <div class="hint">This block uses student token only.</div>
         <div class="statbox">
@@ -225,8 +304,56 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,student">
+        <h2>Search & Discovery</h2>
+        <div class="hint">Uses student token and returns only subscribed tutors/academies.</div>
+        <div class="cols2">
+          <div>
+            <label>Subject</label>
+            <input id="discoverSubject" placeholder="Math" />
+          </div>
+          <div>
+            <label>Location (city/country)</label>
+            <input id="discoverLocation" placeholder="Karachi" />
+          </div>
+        </div>
+        <div class="cols2">
+          <div>
+            <label>Teaching Mode (tutors)</label>
+            <select id="discoverTeachingMode">
+              <option value="">any</option>
+              <option value="online">online</option>
+              <option value="physical">physical</option>
+              <option value="hybrid">hybrid</option>
+            </select>
+          </div>
+          <div>
+            <label>Min Rating</label>
+            <input id="discoverMinRating" type="number" min="0" max="5" step="0.1" value="0" />
+          </div>
+        </div>
+        <div class="cols2">
+          <div>
+            <label>Min Price</label>
+            <input id="discoverMinPrice" type="number" min="0" value="0" />
+          </div>
+          <div>
+            <label>Max Price</label>
+            <input id="discoverMaxPrice" type="number" min="0" value="5000" />
+          </div>
+        </div>
+        <div class="row">
+          <button class="secondary" id="discoverTutorsBtn">Search tutors</button>
+          <button class="secondary" id="discoverAcademiesBtn">Search academies</button>
+        </div>
+        <div class="statbox">
+          <div class="statline" id="discoverStat">Discovery status: -</div>
+        </div>
+      </div>
+
+      <div class="card" data-mode="all,tutor">
         <h2>Session Confirmation (Tutor)</h2>
+        <div class="step">Step 6: Tutor confirms same booking</div>
         <label>Tutor Token (optional override)</label>
         <textarea id="tutorToken" placeholder="Paste tutor token or use global token"></textarea>
         <div class="row">
@@ -236,8 +363,8 @@
         <input id="tutorBookingId" type="number" min="1" placeholder="Booking id for tutor confirm" />
         <div class="row">
           <button class="secondary" id="tutorBookingsBtn">Tutor my bookings</button>
-          <button class="secondary" id="tutorConfirmYesBtn">Tutor Confirm YES</button>
-          <button class="warn" id="tutorConfirmNoBtn">Tutor Confirm NO (refund)</button>
+          <button class="secondary" id="tutorConfirmYesBtn" disabled>Tutor Confirm YES</button>
+          <button class="warn" id="tutorConfirmNoBtn" disabled>Tutor Confirm NO (refund)</button>
         </div>
         <div class="hint">This block uses tutor token only.</div>
         <div class="statbox">
@@ -247,7 +374,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" data-mode="all,admin">
         <h2>Admin Withdrawal Review</h2>
         <label>Admin Token (optional override)</label>
         <textarea id="adminToken" placeholder="Paste admin token or use global token"></textarea>
@@ -269,7 +396,54 @@
         </div>
       </div>
 
-      <div class="card full">
+      <div class="card" data-mode="all,student,tutor">
+        <h2>Review Flow</h2>
+        <div class="step">Step 7: Submit review after completed + released booking</div>
+        <div class="hint">Submit review only after booking is completed and escrow is released.</div>
+        <label>Booking ID</label>
+        <input id="reviewBookingId" type="number" min="1" placeholder="Completed booking id" />
+        <div class="cols2">
+          <div>
+            <label>Rating (1-5)</label>
+            <input id="reviewRating" type="number" min="1" max="5" value="5" />
+          </div>
+          <div>
+            <label>Comment</label>
+            <input id="reviewComment" value="Great session" />
+          </div>
+        </div>
+        <div class="row">
+          <button id="reviewSubmitBtn" disabled>Submit review (student)</button>
+          <button class="secondary" id="reviewStudentMyBtn">My reviews (student)</button>
+          <button class="secondary" id="reviewTutorMyBtn">My reviews (tutor)</button>
+        </div>
+        <div class="statbox">
+          <div class="statline" id="reviewStat">Review status: -</div>
+        </div>
+      </div>
+
+      <div class="card" data-mode="all,chat,student,tutor,academy">
+        <h2>Chat Integration</h2>
+        <label>Chat Token (student/tutor/academy)</label>
+        <textarea id="chatToken" placeholder="Paste chat user token or use global token"></textarea>
+        <div class="row">
+          <button class="secondary" id="useGlobalForChat">Use Global Token</button>
+        </div>
+        <label>Peer Account ID</label>
+        <input id="chatPeerAccountId" type="number" min="1" placeholder="Receiver/peer account id" />
+        <label>Message Content</label>
+        <textarea id="chatContent" placeholder="Type message"></textarea>
+        <div class="row">
+          <button id="chatSendBtn">Send message</button>
+          <button class="secondary" id="chatConversationsBtn">Load conversations</button>
+          <button class="secondary" id="chatThreadBtn">Load thread</button>
+        </div>
+        <div class="statbox">
+          <div class="statline" id="chatStat">Chat status: -</div>
+        </div>
+      </div>
+
+      <div class="card full" data-mode="all,auth,student,tutor,academy,admin,chat">
         <h2>Response Log</h2>
         <div id="log" class="log"></div>
       </div>
@@ -358,6 +532,48 @@ async function call(path, name, opts = {}) {
 }
 
 const getScopedToken = (id) => ($(id).value.trim() || getToken());
+const flowState = {
+  academyListLoaded: false,
+  academyCoursesLoaded: false,
+  studentTopupDone: false,
+  tutorsLoaded: false,
+  slotsLoaded: false,
+  bookingReady: false,
+  tutorBookingReady: false,
+  reviewReady: false,
+};
+
+function setBtn(id, enabled) {
+  const el = $(id);
+  if (el) el.disabled = !enabled;
+}
+
+function applyMode(mode) {
+  const cards = Array.from(document.querySelectorAll(".card[data-mode]"));
+  cards.forEach((card) => {
+    const modes = (card.getAttribute("data-mode") || "").split(",").map((v) => v.trim());
+    const visible = mode === "all" ? true : modes.includes(mode);
+    card.classList.toggle("hidden", !visible);
+  });
+
+  document.querySelectorAll("#modeBar .chip").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.mode === mode);
+  });
+  localStorage.setItem("authTesterMode", mode);
+}
+
+function refreshFlowButtons() {
+  setBtn("academyCoursesBtn", flowState.academyListLoaded);
+  setBtn("academyEnrollBtn", flowState.academyCoursesLoaded);
+  setBtn("tutorsBtn", flowState.studentTopupDone);
+  setBtn("slotsBtn", flowState.tutorsLoaded);
+  setBtn("bookBtn", flowState.slotsLoaded);
+  setBtn("studentConfirmYesBtn", flowState.bookingReady);
+  setBtn("studentConfirmNoBtn", flowState.bookingReady);
+  setBtn("tutorConfirmYesBtn", flowState.tutorBookingReady);
+  setBtn("tutorConfirmNoBtn", flowState.tutorBookingReady);
+  setBtn("reviewSubmitBtn", flowState.reviewReady);
+}
 
 function renderTutorStatusPayload(payload) {
   const d = payload?.data || {};
@@ -415,6 +631,61 @@ function renderSlotOptions(payload) {
     opt.value = s.slot_id;
     opt.textContent = `${s.slot_id} | ${s.start_time}-${s.end_time} | ${s.is_available ? "available" : "booked"}`;
     opt.disabled = !s.is_available;
+    sel.appendChild(opt);
+  });
+}
+
+function renderAcademyStatus(payload) {
+  const d = payload?.data || {};
+  const wallet = d.wallet?.balance;
+  const active = d.active_subscription;
+  setStatText("academyWalletStat", `Academy wallet: ${wallet ?? "-"} PKR`);
+  setStatText(
+    "academySubStat",
+    active ? `Academy subscription: active (${active.plan_type})` : "Academy subscription: none"
+  );
+}
+
+function renderAcademyOptions(payload) {
+  const list = payload?.data?.academies || [];
+  const sel = $("academySelect");
+  sel.innerHTML = "";
+
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No subscribed academy found";
+    sel.appendChild(opt);
+    return;
+  }
+
+  list.forEach((a) => {
+    const opt = document.createElement("option");
+    opt.value = String(a.academy_id);
+    opt.textContent = `#${a.academy_id} ${a.academy_name} (${a.plan_type})`;
+    sel.appendChild(opt);
+  });
+}
+
+function renderAcademyCourseOptions(payload) {
+  const list = payload?.data?.courses || [];
+  const sel = $("academyCourseSelect");
+  sel.innerHTML = "";
+
+  if (!list.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No courses";
+    sel.appendChild(opt);
+    return;
+  }
+
+  list.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = String(c.course_id);
+    const seats = Number(c.seats_left || 0);
+    opt.textContent = `#${c.course_id} ${c.course_title} | seats: ${seats} | fee: ${c.enrollment_fee}`;
+    opt.disabled = seats <= 0;
     sel.appendChild(opt);
   });
 }
@@ -534,6 +805,98 @@ $("fullFlowBtn").onclick = async () => {
   setStatus("Flow done: status refreshed");
 };
 
+$("academyTopupBtn").onclick = async () => {
+  const payload = await call('/api/v1/subscriptions/academy/topup', 'ACADEMY_TOPUP', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("academyToken"),
+    body: { amount: Number($("academyTopupAmount").value) }
+  });
+  const after = payload?.data?.balance_after;
+  if (after !== undefined) {
+    setStatText("academyWalletStat", `Academy wallet: ${after} PKR`);
+  }
+};
+
+$("academyPurchaseBtn").onclick = async () => {
+  await call('/api/v1/subscriptions/academy/purchase', 'ACADEMY_PURCHASE', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("academyToken"),
+    body: { plan_type: $("academyPlanType").value }
+  });
+  $("academyStatusBtn").click();
+};
+
+$("academyStatusBtn").onclick = async () => {
+  const payload = await call('/api/v1/subscriptions/academy/status', 'ACADEMY_STATUS', {
+    auth: true,
+    token: getScopedToken("academyToken")
+  });
+  renderAcademyStatus(payload);
+};
+
+$("academySeedCoursesBtn").onclick = async () => {
+  const payload = await call('/api/v1/academies/academy/courses/seed-demo', 'ACADEMY_SEED_COURSES', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("academyToken")
+  });
+  const inserted = payload?.data?.inserted ?? 0;
+  setStatText("academySubStat", `Academy subscription: seed done (${inserted} inserted)`);
+};
+
+$("academyListBtn").onclick = async () => {
+  const payload = await call('/api/v1/academies/list', 'ACADEMY_LIST', {
+    auth: true,
+    token: getScopedToken("academyStudentToken")
+  });
+  renderAcademyOptions(payload);
+  flowState.academyListLoaded = true;
+  flowState.academyCoursesLoaded = false;
+  refreshFlowButtons();
+};
+
+$("academyCoursesBtn").onclick = async () => {
+  const academyId = $("academySelect").value;
+  const payload = await call(`/api/v1/academies/${academyId}/courses`, 'ACADEMY_COURSES', {
+    auth: true,
+    token: getScopedToken("academyStudentToken")
+  });
+  renderAcademyCourseOptions(payload);
+  flowState.academyCoursesLoaded = true;
+  refreshFlowButtons();
+};
+
+$("academyEnrollBtn").onclick = async () => {
+  const payload = await call('/api/v1/academies/enroll', 'ACADEMY_ENROLL', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("academyStudentToken"),
+    body: {
+      academy_id: Number($("academySelect").value),
+      course_id: Number($("academyCourseSelect").value)
+    }
+  });
+  const status = payload?.data?.enrollment?.status || "-";
+  const wallet = payload?.data?.student_wallet?.balance_after;
+  setStatText("academyEnrollStat", `Enrollment status: ${status}`);
+  if (wallet !== undefined) {
+    setStatText("academyStudentWalletStat", `Student wallet (academy flow): ${wallet} PKR`);
+  }
+};
+
+$("academyMyEnrollmentsBtn").onclick = async () => {
+  const payload = await call('/api/v1/academies/enrollments/my', 'ACADEMY_MY_ENROLLMENTS', {
+    auth: true,
+    token: getScopedToken("academyStudentToken")
+  });
+  const first = payload?.data?.enrollments?.[0];
+  if (first) {
+    setStatText("academyEnrollStat", `Enrollment status: ${first.status} | course: ${first.course_title}`);
+  }
+};
+
 $("withdrawRequestBtn").onclick = async () => {
   const payload = await call('/api/v1/withdrawals/request', 'WITHDRAW_REQUEST', {
     method: 'POST',
@@ -568,9 +931,15 @@ $("withdrawMyBtn").onclick = async () => {
 $("useGlobalForStudent").onclick = () => { $("studentToken").value = getToken(); };
 $("useGlobalForTutor").onclick = () => { $("tutorToken").value = getToken(); };
 $("useGlobalForAdmin").onclick = () => { $("adminToken").value = getToken(); };
+$("useGlobalForAcademy").onclick = () => { $("academyToken").value = getToken(); };
+$("useGlobalForAcademyStudent").onclick = () => { $("academyStudentToken").value = getToken(); };
+$("useGlobalForChat").onclick = () => { $("chatToken").value = getToken(); };
 $("studentToken").oninput = () => localStorage.setItem("authTesterStudentToken", $("studentToken").value.trim());
 $("tutorToken").oninput = () => localStorage.setItem("authTesterTutorToken", $("tutorToken").value.trim());
 $("adminToken").oninput = () => localStorage.setItem("authTesterAdminToken", $("adminToken").value.trim());
+$("academyToken").oninput = () => localStorage.setItem("authTesterAcademyToken", $("academyToken").value.trim());
+$("academyStudentToken").oninput = () => localStorage.setItem("authTesterAcademyStudentToken", $("academyStudentToken").value.trim());
+$("chatToken").oninput = () => localStorage.setItem("authTesterChatToken", $("chatToken").value.trim());
 
 $("studentTopupBtn").onclick = async () => {
   const payload = await call("/api/v1/sessions/student/topup", "STUDENT_TOPUP", {
@@ -583,6 +952,12 @@ $("studentTopupBtn").onclick = async () => {
   if (after !== undefined) {
     setStatText("studentWallet", `Student wallet: ${after} PKR`);
   }
+  flowState.studentTopupDone = true;
+  flowState.tutorsLoaded = false;
+  flowState.slotsLoaded = false;
+  flowState.bookingReady = false;
+  flowState.reviewReady = false;
+  refreshFlowButtons();
 };
 
 $("tutorsBtn").onclick = async () => {
@@ -591,6 +966,10 @@ $("tutorsBtn").onclick = async () => {
     token: getScopedToken("studentToken")
   });
   renderTutorOptions(payload);
+  flowState.tutorsLoaded = true;
+  flowState.slotsLoaded = false;
+  flowState.bookingReady = false;
+  refreshFlowButtons();
 };
 
 $("slotsBtn").onclick = async () => {
@@ -601,6 +980,8 @@ $("slotsBtn").onclick = async () => {
     token: getScopedToken("studentToken")
   });
   renderSlotOptions(payload);
+  flowState.slotsLoaded = (payload?.data?.slots || []).some((s) => s.is_available);
+  refreshFlowButtons();
 };
 
 $("bookBtn").onclick = async () => {
@@ -615,6 +996,10 @@ $("bookBtn").onclick = async () => {
     }
   });
   renderBookingResult(payload, "student");
+  flowState.bookingReady = true;
+  flowState.tutorBookingReady = true;
+  flowState.reviewReady = false;
+  refreshFlowButtons();
 };
 
 $("studentBookingsBtn").onclick = async () => {
@@ -628,6 +1013,12 @@ $("studentBookingsBtn").onclick = async () => {
     setStatText("studentEscrow", `Escrow: ${first.escrow_status}`);
     $("studentBookingId").value = first.booking_id;
     $("tutorBookingId").value = first.booking_id;
+    flowState.bookingReady = true;
+    flowState.tutorBookingReady = true;
+    if (first.booking_status === "completed" && first.escrow_status === "released") {
+      flowState.reviewReady = true;
+    }
+    refreshFlowButtons();
   }
 };
 
@@ -640,6 +1031,10 @@ $("studentConfirmYesBtn").onclick = async () => {
     body: { confirmed: true }
   });
   renderBookingResult(payload, "student");
+  if (payload?.data?.action === "released") {
+    flowState.reviewReady = true;
+  }
+  refreshFlowButtons();
 };
 
 $("studentConfirmNoBtn").onclick = async () => {
@@ -651,6 +1046,8 @@ $("studentConfirmNoBtn").onclick = async () => {
     body: { confirmed: false }
   });
   renderBookingResult(payload, "student");
+  flowState.reviewReady = false;
+  refreshFlowButtons();
 };
 
 $("tutorBookingsBtn").onclick = async () => {
@@ -664,6 +1061,11 @@ $("tutorBookingsBtn").onclick = async () => {
     setStatText("tutorEscrow", `Escrow: ${first.escrow_status}`);
     setStatText("tutorAction", `Last action: from my bookings`);
     $("tutorBookingId").value = first.booking_id;
+    flowState.tutorBookingReady = true;
+    if (first.booking_status === "completed" && first.escrow_status === "released") {
+      flowState.reviewReady = true;
+    }
+    refreshFlowButtons();
   }
 };
 
@@ -676,6 +1078,10 @@ $("tutorConfirmYesBtn").onclick = async () => {
     body: { confirmed: true }
   });
   renderBookingResult(payload, "tutor");
+  if (payload?.data?.action === "released") {
+    flowState.reviewReady = true;
+  }
+  refreshFlowButtons();
 };
 
 $("tutorConfirmNoBtn").onclick = async () => {
@@ -687,6 +1093,48 @@ $("tutorConfirmNoBtn").onclick = async () => {
     body: { confirmed: false }
   });
   renderBookingResult(payload, "tutor");
+  flowState.reviewReady = false;
+  refreshFlowButtons();
+};
+
+function buildDiscoveryQuery(includeTeachingMode) {
+  const q = new URLSearchParams();
+  const subject = $("discoverSubject").value.trim();
+  const location = $("discoverLocation").value.trim();
+  const teachingMode = $("discoverTeachingMode").value;
+  const minRating = $("discoverMinRating").value.trim();
+  const minPrice = $("discoverMinPrice").value.trim();
+  const maxPrice = $("discoverMaxPrice").value.trim();
+
+  if (subject) q.set("subject", subject);
+  if (location) q.set("location", location);
+  if (includeTeachingMode && teachingMode) q.set("teaching_mode", teachingMode);
+  if (minRating) q.set("min_rating", minRating);
+  if (minPrice) q.set("min_price", minPrice);
+  if (maxPrice) q.set("max_price", maxPrice);
+  q.set("limit", "20");
+  q.set("offset", "0");
+  return q.toString();
+}
+
+$("discoverTutorsBtn").onclick = async () => {
+  const query = buildDiscoveryQuery(true);
+  const payload = await call(`/api/v1/discovery/tutors?${query}`, "DISCOVERY_TUTORS", {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  const count = payload?.data?.count ?? 0;
+  setStatText("discoverStat", `Discovery status: tutors found = ${count}`);
+};
+
+$("discoverAcademiesBtn").onclick = async () => {
+  const query = buildDiscoveryQuery(false);
+  const payload = await call(`/api/v1/discovery/academies?${query}`, "DISCOVERY_ACADEMIES", {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  const count = payload?.data?.count ?? 0;
+  setStatText("discoverStat", `Discovery status: academies found = ${count}`);
 };
 
 $("adminLoadPendingBtn").onclick = async () => {
@@ -733,19 +1181,113 @@ $("adminRejectBtn").onclick = async () => {
   setStatText("adminWithdrawStat", `Admin withdrawal action: ${action} (id=${id})`);
 };
 
+$("reviewSubmitBtn").onclick = async () => {
+  const payload = await call('/api/v1/reviews', 'REVIEW_CREATE', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("studentToken"),
+    body: {
+      booking_id: Number($("reviewBookingId").value),
+      rating: Number($("reviewRating").value),
+      comment: $("reviewComment").value.trim()
+    }
+  });
+
+  const avg = payload?.data?.tutor_rating?.average_rating;
+  const total = payload?.data?.tutor_rating?.total_reviews;
+  setStatText("reviewStat", `Review status: created | tutor avg=${avg} (${total} reviews)`);
+  flowState.reviewReady = false;
+  refreshFlowButtons();
+};
+
+$("reviewStudentMyBtn").onclick = async () => {
+  const payload = await call('/api/v1/reviews/my', 'REVIEW_MY_STUDENT', {
+    auth: true,
+    token: getScopedToken("studentToken")
+  });
+  const count = payload?.data?.length || 0;
+  const first = payload?.data?.[0];
+  if (first?.booking_id) {
+    $("reviewBookingId").value = first.booking_id;
+  }
+  setStatText("reviewStat", `Review status: student has ${count} review(s)`);
+};
+
+$("reviewTutorMyBtn").onclick = async () => {
+  const payload = await call('/api/v1/reviews/my', 'REVIEW_MY_TUTOR', {
+    auth: true,
+    token: getScopedToken("tutorToken")
+  });
+  const count = payload?.data?.reviews?.length || 0;
+  const avg = payload?.data?.rating_summary?.average_rating ?? 0;
+  setStatText("reviewStat", `Review status: tutor has ${count} review(s), avg=${avg}`);
+};
+
+$("chatSendBtn").onclick = async () => {
+  const payload = await call('/api/v1/chat/messages', 'CHAT_SEND', {
+    method: 'POST',
+    auth: true,
+    token: getScopedToken("chatToken"),
+    body: {
+      receiver_account_id: Number($("chatPeerAccountId").value),
+      content: $("chatContent").value.trim()
+    }
+  });
+  const id = payload?.data?.message?.message_id;
+  setStatText("chatStat", `Chat status: message sent (id=${id})`);
+};
+
+$("chatConversationsBtn").onclick = async () => {
+  const payload = await call('/api/v1/chat/conversations', 'CHAT_CONVERSATIONS', {
+    auth: true,
+    token: getScopedToken("chatToken")
+  });
+  const first = payload?.data?.conversations?.[0];
+  if (first) {
+    $("chatPeerAccountId").value = first.peer_account_id;
+    setStatText("chatStat", `Chat status: ${payload.data.conversations.length} conversations, latest peer=${first.peer_account_id}`);
+  } else {
+    setStatText("chatStat", "Chat status: no conversations");
+  }
+};
+
+$("chatThreadBtn").onclick = async () => {
+  const peer = Number($("chatPeerAccountId").value);
+  const payload = await call(`/api/v1/chat/messages/${peer}?limit=30&offset=0`, 'CHAT_THREAD', {
+    auth: true,
+    token: getScopedToken("chatToken")
+  });
+  const count = payload?.data?.messages?.length || 0;
+  setStatText("chatStat", `Chat status: thread loaded (${count} messages)`);
+};
+
 (function init(){
   const saved = localStorage.getItem('authTesterToken');
   if (saved) $("token").value = saved;
   const savedStudent = localStorage.getItem("authTesterStudentToken");
   const savedTutor = localStorage.getItem("authTesterTutorToken");
   const savedAdmin = localStorage.getItem("authTesterAdminToken");
+  const savedAcademy = localStorage.getItem("authTesterAcademyToken");
+  const savedAcademyStudent = localStorage.getItem("authTesterAcademyStudentToken");
+  const savedChat = localStorage.getItem("authTesterChatToken");
   if (savedStudent) $("studentToken").value = savedStudent;
   if (savedTutor) $("tutorToken").value = savedTutor;
   if (savedAdmin) $("adminToken").value = savedAdmin;
+  if (savedAcademy) $("academyToken").value = savedAcademy;
+  if (savedAcademyStudent) $("academyStudentToken").value = savedAcademyStudent;
+  if (savedChat) $("chatToken").value = savedChat;
   if (!$("sessionDate").value) {
     const tomorrow = new Date(Date.now() + 86400000);
     $("sessionDate").value = tomorrow.toISOString().slice(0, 10);
   }
+
+  document.querySelectorAll("#modeBar .chip").forEach((btn) => {
+    btn.addEventListener("click", () => applyMode(btn.dataset.mode));
+  });
+  const qsMode = new URLSearchParams(window.location.search).get("mode");
+  applyMode(qsMode || localStorage.getItem("authTesterMode") || "all");
+  refreshFlowButtons();
+
   setRoleUI($("regRole").value);
 })();
 </script>

@@ -67,6 +67,8 @@ async function listAvailableTutors() {
       s.end_at
     FROM tutors t
     JOIN accounts a ON a.account_id = t.account_id
+    LEFT JOIN academy_tutor_members atm
+      ON atm.tutor_id = t.tutor_id AND atm.is_active = TRUE
     JOIN subscriptions s
       ON s.tutor_id = t.tutor_id
      AND s.is_active = TRUE
@@ -74,6 +76,7 @@ async function listAvailableTutors() {
        (s.end_at IS NOT NULL AND s.end_at > NOW()) OR
        (s.end_at IS NULL AND s.end_date >= CURRENT_DATE)
      )
+    WHERE atm.membership_id IS NULL
     ORDER BY t.tutor_id DESC
     `
   );
@@ -118,14 +121,17 @@ async function bookTutorSession({ studentAccountId, tutorId, date, slotId }) {
       `
       SELECT t.tutor_id
       FROM tutors t
+      LEFT JOIN academy_tutor_members atm
+        ON atm.tutor_id = t.tutor_id AND atm.is_active = TRUE
       JOIN subscriptions s
         ON s.tutor_id = t.tutor_id
        AND s.is_active = TRUE
        AND (
          (s.end_at IS NOT NULL AND s.end_at > NOW()) OR
          (s.end_at IS NULL AND s.end_date >= CURRENT_DATE)
-       )
+        )
       WHERE t.tutor_id = $1
+        AND atm.membership_id IS NULL
       LIMIT 1
       `,
       [tutorId]

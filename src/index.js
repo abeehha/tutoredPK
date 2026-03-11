@@ -11,6 +11,10 @@ const authRoutes = require("./routes/authRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const sessionBookingRoutes = require("./routes/sessionBookingRoutes");
 const withdrawalRoutes = require("./routes/withdrawalRoutes");
+const academyRoutes = require("./routes/academyRoutes");
+const chatRoutes = require("./routes/chatRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
+const discoveryRoutes = require("./routes/discoveryRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -47,6 +51,10 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/subscriptions", subscriptionRoutes);
 app.use("/api/v1/sessions", sessionBookingRoutes);
 app.use("/api/v1/withdrawals", withdrawalRoutes);
+app.use("/api/v1/academies", academyRoutes);
+app.use("/api/v1/chat", chatRoutes);
+app.use("/api/v1/reviews", reviewRoutes);
+app.use("/api/v1/discovery", discoveryRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
