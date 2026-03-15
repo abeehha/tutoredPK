@@ -42,7 +42,7 @@
   <div class="wrap">
     <h1>TutoredPK Temporary Tester</h1>
     <p class="small">Temporary raw UI for Auth, RBAC, tutor subscription, and student booking escrow flow tests.</p>
-    <div class="toolbar">
+    <div class="toolbar" id="roleLinksBar">
       <a class="chip" href="./auth-tester.html">Master</a>
       <a class="chip" href="./student-tester.html">Student Page</a>
       <a class="chip" href="./tutor-tester.html">Tutor Page</a>
@@ -57,15 +57,18 @@
       <button class="chip" data-mode="academy">Academy</button>
       <button class="chip" data-mode="admin">Admin</button>
       <button class="chip" data-mode="chat">Chat</button>
+      <button class="chip" id="resetFlowBtn">Reset Guided Flow</button>
     </div>
 
     <div class="grid">
-      <div class="card" data-mode="all,auth">
+      <div class="card" data-mode="all,auth,student,tutor,academy,admin,chat">
         <h2>Config</h2>
         <label>Base URL</label>
         <input id="baseUrl" value="http://localhost:4001" />
-        <label>Access Token</label>
-        <textarea id="token" placeholder="Token auto-fills after login"></textarea>
+        <label>Access Token (auto)</label>
+        <textarea id="token" placeholder="Auto-filled after login. No need to paste manually."></textarea>
+        <label>Refresh Token (auto)</label>
+        <textarea id="refreshToken" placeholder="Auto-filled after login. Used for logout/reset flows."></textarea>
         <div class="row">
           <button class="secondary" id="saveToken">Save Token</button>
           <button class="secondary" id="clearToken">Clear Token</button>
@@ -79,6 +82,7 @@
         <input id="regEmail" placeholder="yourname+test1@gmail.com" />
         <label>Password *</label>
         <input id="regPass" type="password" value="TestPass123!" />
+        <div class="hint">Password rule: min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 symbol.</div>
         <label>Role *</label>
         <select id="regRole">
           <option value="student">student</option>
@@ -122,7 +126,7 @@
         <div class="hint">If email verification is enabled, click email link before login.</div>
       </div>
 
-      <div class="card" data-mode="all,auth">
+      <div class="card" data-mode="all,auth,student,tutor,academy,admin,chat">
         <h2>Login / Verify</h2>
         <label>Email</label>
         <input id="loginEmail" placeholder="same as register" />
@@ -130,17 +134,30 @@
         <input id="loginPass" type="password" value="TestPass123!" />
         <div class="row">
           <button id="loginBtn">Login</button>
+          <button class="warn" id="logoutBtn">Logout</button>
           <button class="secondary" id="resendBtn">Resend verification</button>
+          <button class="secondary" id="forgotPassBtn">Forgot password email</button>
         </div>
         <div class="row">
           <button class="secondary" id="meBtn">/auth/me</button>
           <button class="secondary" id="rbacTutorBtn">RBAC tutor</button>
           <button class="secondary" id="rbacAdminBtn">RBAC admin</button>
         </div>
+        <label>Recovery Access Token (from reset link)</label>
+        <textarea id="resetAccessToken" placeholder="Paste access token from recovery callback"></textarea>
+        <label>Recovery Refresh Token (from reset link)</label>
+        <textarea id="resetRefreshToken" placeholder="Paste refresh token from recovery callback"></textarea>
+        <label>New Password</label>
+        <input id="resetNewPassword" type="password" value="NewPass123!" />
+        <div class="hint">New password must include uppercase, lowercase, number, symbol, and 8+ characters.</div>
+        <div class="row">
+          <button class="secondary" id="resetPassBtn">Reset password</button>
+        </div>
       </div>
 
       <div class="card" data-mode="all,tutor">
         <h2>Subscription Flow (Tutor)</h2>
+        <div class="hint">Checklist: 1) Status -> 2) Top-up -> 3) Purchase (if no active sub) -> 4) Status -> 5) Optional withdrawal.</div>
         <div class="row">
           <button class="secondary" id="plansBtn">Get plans</button>
           <button class="secondary" id="statusBtn">Tutor status</button>
@@ -194,6 +211,7 @@
         </div>
         <div class="hint">Use tutor token. Endpoints are tutor-only.</div>
         <div class="statbox">
+          <div class="statline" id="tutorTxnStat">Last tutor transaction: -</div>
           <div class="statline" id="statWallet">Wallet: -</div>
           <div class="statline" id="statActive">Active Subscription: -</div>
           <div class="statline" id="statNext">Next Action: -</div>
@@ -202,7 +220,9 @@
 
       <div class="card" data-mode="all,academy,student">
         <h2>Academy Flow</h2>
+        <div id="academyOpsSection">
         <div class="step">Step 1: Academy Subscription</div>
+        <div class="hint">Checklist: status -> top-up -> purchase -> status -> seed demo courses.</div>
         <label>Academy Token (optional override)</label>
         <textarea id="academyToken" placeholder="Paste academy token or use global token"></textarea>
         <div class="row">
@@ -227,11 +247,15 @@
           <button class="secondary" id="academySeedCoursesBtn">Add 10 demo courses</button>
         </div>
         <div class="statbox">
+          <div class="statline" id="academyTxnStat">Last academy transaction: -</div>
           <div class="statline" id="academyWalletStat">Academy wallet: -</div>
           <div class="statline" id="academySubStat">Academy subscription: -</div>
         </div>
+        </div>
 
+        <div id="academyStudentEnrollSection">
         <div class="step">Step 2: Student Enrollment</div>
+        <div class="hint">Checklist: load academies -> load courses -> enroll -> check my enrollments.</div>
         <label>Student Token for Academy Enrollment</label>
         <textarea id="academyStudentToken" placeholder="Paste student token or use global token"></textarea>
         <div class="row">
@@ -255,11 +279,13 @@
           <div class="statline" id="academyEnrollStat">Enrollment status: -</div>
           <div class="statline" id="academyStudentWalletStat">Student wallet (academy flow): -</div>
         </div>
+        </div>
       </div>
 
       <div class="card" data-mode="all,student">
         <h2>Session Booking (Student)</h2>
         <div class="step">Step 1: Top up student wallet</div>
+        <div class="hint">Checklist: top-up -> tutors -> slots -> book -> student confirm -> review (after release).</div>
         <label>Student Token (optional override)</label>
         <textarea id="studentToken" placeholder="Paste student token or use global token"></textarea>
         <div class="row">
@@ -298,6 +324,7 @@
         </div>
         <div class="hint">This block uses student token only.</div>
         <div class="statbox">
+          <div class="statline" id="studentTxnStat">Last student transaction: -</div>
           <div class="statline" id="studentBookStat">Booking status: -</div>
           <div class="statline" id="studentEscrow">Escrow: -</div>
           <div class="statline" id="studentWallet">Student wallet: -</div>
@@ -354,6 +381,7 @@
       <div class="card" data-mode="all,tutor">
         <h2>Session Confirmation (Tutor)</h2>
         <div class="step">Step 6: Tutor confirms same booking</div>
+        <div class="hint">Checklist: tutor my bookings -> tutor confirm YES/NO.</div>
         <label>Tutor Token (optional override)</label>
         <textarea id="tutorToken" placeholder="Paste tutor token or use global token"></textarea>
         <div class="row">
@@ -376,6 +404,7 @@
 
       <div class="card" data-mode="all,admin">
         <h2>Admin Withdrawal Review</h2>
+        <div class="hint">Checklist: load pending -> approve or reject.</div>
         <label>Admin Token (optional override)</label>
         <textarea id="adminToken" placeholder="Paste admin token or use global token"></textarea>
         <div class="row">
@@ -424,6 +453,7 @@
 
       <div class="card" data-mode="all,chat,student,tutor,academy">
         <h2>Chat Integration</h2>
+        <div class="hint">Checklist: send message -> load conversations -> load thread.</div>
         <label>Chat Token (student/tutor/academy)</label>
         <textarea id="chatToken" placeholder="Paste chat user token or use global token"></textarea>
         <div class="row">
@@ -452,6 +482,7 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+let LOCK_MODE = false;
 const log = (title, data, isError=false) => {
   const el = $("log");
   const t = new Date().toLocaleTimeString();
@@ -467,9 +498,14 @@ const setStatus = (text) => { $("statusPill").textContent = text; };
 const setStatText = (id, text) => { $(id).textContent = text; };
 const getBase = () => $("baseUrl").value.trim().replace(/\/$/, '');
 const getToken = () => $("token").value.trim();
+const getRefreshToken = () => $("refreshToken").value.trim();
 const setToken = (token) => {
   $("token").value = token || "";
   localStorage.setItem("authTesterToken", token || "");
+};
+const setRefreshToken = (token) => {
+  $("refreshToken").value = token || "";
+  localStorage.setItem("authTesterRefreshToken", token || "");
 };
 
 function setRoleUI(role) {
@@ -531,7 +567,7 @@ async function call(path, name, opts = {}) {
   }
 }
 
-const getScopedToken = (id) => ($(id).value.trim() || getToken());
+const getScopedToken = (id) => (LOCK_MODE ? getToken() : (($(id) && $(id).value.trim()) || getToken()));
 const flowState = {
   academyListLoaded: false,
   academyCoursesLoaded: false,
@@ -573,6 +609,64 @@ function refreshFlowButtons() {
   setBtn("tutorConfirmYesBtn", flowState.tutorBookingReady);
   setBtn("tutorConfirmNoBtn", flowState.tutorBookingReady);
   setBtn("reviewSubmitBtn", flowState.reviewReady);
+}
+
+function resetGuidedFlow() {
+  flowState.academyListLoaded = false;
+  flowState.academyCoursesLoaded = false;
+  flowState.studentTopupDone = false;
+  flowState.tutorsLoaded = false;
+  flowState.slotsLoaded = false;
+  flowState.bookingReady = false;
+  flowState.tutorBookingReady = false;
+  flowState.reviewReady = false;
+  refreshFlowButtons();
+  setStatus("Guided flow reset");
+}
+
+function applyLockedRoleTweaks(mode) {
+  if (mode === "student") {
+    if ($("academyOpsSection")) $("academyOpsSection").classList.add("hidden");
+    if ($("reviewTutorMyBtn")) $("reviewTutorMyBtn").classList.add("hidden");
+  }
+  if (mode === "academy") {
+    if ($("academyStudentEnrollSection")) $("academyStudentEnrollSection").classList.add("hidden");
+  }
+  if (mode === "tutor") {
+    if ($("reviewSubmitBtn")) $("reviewSubmitBtn").classList.add("hidden");
+    if ($("reviewStudentMyBtn")) $("reviewStudentMyBtn").classList.add("hidden");
+  }
+
+  const hideField = (id) => {
+    const el = $(id);
+    if (!el) return;
+    el.classList.add("hidden");
+    if (el.previousElementSibling && el.previousElementSibling.tagName === "LABEL") {
+      el.previousElementSibling.classList.add("hidden");
+    }
+  };
+  const hideButton = (id) => {
+    const el = $(id);
+    if (el) el.classList.add("hidden");
+  };
+
+  [
+    "studentToken",
+    "tutorToken",
+    "academyToken",
+    "academyStudentToken",
+    "adminToken",
+    "chatToken",
+  ].forEach(hideField);
+
+  [
+    "useGlobalForStudent",
+    "useGlobalForTutor",
+    "useGlobalForAcademy",
+    "useGlobalForAcademyStudent",
+    "useGlobalForAdmin",
+    "useGlobalForChat",
+  ].forEach(hideButton);
 }
 
 function renderTutorStatusPayload(payload) {
@@ -701,6 +795,10 @@ function renderBookingResult(payload, scope) {
     setStatText("studentEscrow", `Escrow: ${booking.escrow_status || data.escrow_status || "-"}`);
     if (wallet.balance_after !== undefined) {
       setStatText("studentWallet", `Student wallet: ${wallet.balance_after} PKR`);
+      setStatText(
+        "studentTxnStat",
+        `Last student transaction: booking flow | before ${wallet.balance_before ?? "-"} -> after ${wallet.balance_after}`
+      );
     }
   } else {
     setStatText("tutorBookStat", `Booking status: ${booking.booking_status || data.booking_status || "-"}`);
@@ -729,8 +827,18 @@ async function refreshTutorStatus() {
   renderTutorStatusPayload(payload);
 }
 
-$("saveToken").onclick = () => { setToken(getToken()); setStatus("Token saved"); log("TOKEN", { saved: true }); };
-$("clearToken").onclick = () => { setToken(""); setStatus("Token cleared"); log("TOKEN", { cleared: true }); };
+$("saveToken").onclick = () => {
+  setToken(getToken());
+  setRefreshToken(getRefreshToken());
+  setStatus("Token saved");
+  log("TOKEN", { saved: true });
+};
+$("clearToken").onclick = () => {
+  setToken("");
+  setRefreshToken("");
+  setStatus("Token cleared");
+  log("TOKEN", { cleared: true });
+};
 
 $("regRole").onchange = () => setRoleUI($("regRole").value);
 
@@ -748,10 +856,20 @@ $("loginBtn").onclick = async () => {
   };
   const data = await call('/api/v1/auth/login', 'LOGIN', { method:'POST', body:payload });
   const token = data?.data?.access_token;
+  const refresh = data?.data?.refresh_token;
   if (token) {
     setToken(token);
     setStatus('Logged in, token loaded');
   }
+  if (refresh) setRefreshToken(refresh);
+};
+
+$("logoutBtn").onclick = async () => {
+  const payload = { refresh_token: getRefreshToken() || undefined };
+  await call('/api/v1/auth/logout', 'LOGOUT', { method:'POST', body:payload, auth:true });
+  setToken("");
+  setRefreshToken("");
+  setStatus("Logged out");
 };
 
 $("resendBtn").onclick = async () => {
@@ -759,6 +877,26 @@ $("resendBtn").onclick = async () => {
     method:'POST',
     body:{ email: $("loginEmail").value.trim().toLowerCase() }
   });
+};
+
+$("forgotPassBtn").onclick = async () => {
+  await call('/api/v1/auth/forgot-password', 'FORGOT_PASSWORD', {
+    method: 'POST',
+    body: { email: $("loginEmail").value.trim().toLowerCase() }
+  });
+  setStatus("Password reset email requested");
+};
+
+$("resetPassBtn").onclick = async () => {
+  await call('/api/v1/auth/reset-password', 'RESET_PASSWORD', {
+    method: 'POST',
+    body: {
+      access_token: $("resetAccessToken").value.trim(),
+      refresh_token: $("resetRefreshToken").value.trim(),
+      new_password: $("resetNewPassword").value
+    }
+  });
+  setStatus("Password reset complete");
 };
 
 $("meBtn").onclick = () => call('/api/v1/auth/me', 'ME', { auth:true });
@@ -769,22 +907,33 @@ $("plansBtn").onclick = () => call('/api/v1/subscriptions/plans', 'PLANS');
 $("statusBtn").onclick = () => refreshTutorStatus();
 
 $("topupBtn").onclick = async () => {
-  await call('/api/v1/subscriptions/tutor/topup', 'TOPUP', {
+  const payload = await call('/api/v1/subscriptions/tutor/topup', 'TOPUP', {
     method:'POST',
     auth:true,
     token: getScopedToken("tutorToken"),
     body:{ amount: Number($("topupAmount").value) }
   });
+  const d = payload?.data || {};
+  setStatText(
+    "tutorTxnStat",
+    `Last tutor transaction: topup ${d.topup_amount ?? "-"} | before ${d.balance_before ?? "-"} -> after ${d.balance_after ?? "-"}`
+  );
   await refreshTutorStatus();
 };
 
 $("purchaseBtn").onclick = async () => {
-  await call('/api/v1/subscriptions/tutor/purchase', 'PURCHASE', {
+  const payload = await call('/api/v1/subscriptions/tutor/purchase', 'PURCHASE', {
     method:'POST',
     auth:true,
     token: getScopedToken("tutorToken"),
     body:{ plan_type: $("planType").value }
   });
+  const w = payload?.data?.wallet || {};
+  const sub = payload?.data?.subscription?.plan_type || $("planType").value;
+  setStatText(
+    "tutorTxnStat",
+    `Last tutor transaction: purchase ${sub} | before ${w.balance_before ?? "-"} -> after ${w.balance_after ?? "-"}`
+  );
   await refreshTutorStatus();
 };
 
@@ -812,19 +961,26 @@ $("academyTopupBtn").onclick = async () => {
     token: getScopedToken("academyToken"),
     body: { amount: Number($("academyTopupAmount").value) }
   });
-  const after = payload?.data?.balance_after;
-  if (after !== undefined) {
-    setStatText("academyWalletStat", `Academy wallet: ${after} PKR`);
-  }
+  const d = payload?.data || {};
+  setStatText(
+    "academyTxnStat",
+    `Last academy transaction: topup ${d.topup_amount ?? "-"} | before ${d.balance_before ?? "-"} -> after ${d.balance_after ?? "-"}`
+  );
+  if (d.balance_after !== undefined) setStatText("academyWalletStat", `Academy wallet: ${d.balance_after} PKR`);
 };
 
 $("academyPurchaseBtn").onclick = async () => {
-  await call('/api/v1/subscriptions/academy/purchase', 'ACADEMY_PURCHASE', {
+  const payload = await call('/api/v1/subscriptions/academy/purchase', 'ACADEMY_PURCHASE', {
     method: 'POST',
     auth: true,
     token: getScopedToken("academyToken"),
     body: { plan_type: $("academyPlanType").value }
   });
+  const w = payload?.data?.wallet || {};
+  setStatText(
+    "academyTxnStat",
+    `Last academy transaction: purchase 1m | before ${w.balance_before ?? "-"} -> after ${w.balance_after ?? "-"}`
+  );
   $("academyStatusBtn").click();
 };
 
@@ -940,6 +1096,7 @@ $("adminToken").oninput = () => localStorage.setItem("authTesterAdminToken", $("
 $("academyToken").oninput = () => localStorage.setItem("authTesterAcademyToken", $("academyToken").value.trim());
 $("academyStudentToken").oninput = () => localStorage.setItem("authTesterAcademyStudentToken", $("academyStudentToken").value.trim());
 $("chatToken").oninput = () => localStorage.setItem("authTesterChatToken", $("chatToken").value.trim());
+$("refreshToken").oninput = () => localStorage.setItem("authTesterRefreshToken", $("refreshToken").value.trim());
 
 $("studentTopupBtn").onclick = async () => {
   const payload = await call("/api/v1/sessions/student/topup", "STUDENT_TOPUP", {
@@ -948,10 +1105,12 @@ $("studentTopupBtn").onclick = async () => {
     token: getScopedToken("studentToken"),
     body: { amount: Number($("studentTopupAmount").value) }
   });
-  const after = payload?.data?.balance_after;
-  if (after !== undefined) {
-    setStatText("studentWallet", `Student wallet: ${after} PKR`);
-  }
+  const d = payload?.data || {};
+  if (d.balance_after !== undefined) setStatText("studentWallet", `Student wallet: ${d.balance_after} PKR`);
+  setStatText(
+    "studentTxnStat",
+    `Last student transaction: topup ${d.topup_amount ?? "-"} | before ${d.balance_before ?? "-"} -> after ${d.balance_after ?? "-"}`
+  );
   flowState.studentTopupDone = true;
   flowState.tutorsLoaded = false;
   flowState.slotsLoaded = false;
@@ -1223,6 +1382,8 @@ $("reviewTutorMyBtn").onclick = async () => {
   setStatText("reviewStat", `Review status: tutor has ${count} review(s), avg=${avg}`);
 };
 
+$("resetFlowBtn").onclick = () => resetGuidedFlow();
+
 $("chatSendBtn").onclick = async () => {
   const payload = await call('/api/v1/chat/messages', 'CHAT_SEND', {
     method: 'POST',
@@ -1264,6 +1425,8 @@ $("chatThreadBtn").onclick = async () => {
 (function init(){
   const saved = localStorage.getItem('authTesterToken');
   if (saved) $("token").value = saved;
+  const savedRefresh = localStorage.getItem("authTesterRefreshToken");
+  if (savedRefresh) $("refreshToken").value = savedRefresh;
   const savedStudent = localStorage.getItem("authTesterStudentToken");
   const savedTutor = localStorage.getItem("authTesterTutorToken");
   const savedAdmin = localStorage.getItem("authTesterAdminToken");
@@ -1284,8 +1447,17 @@ $("chatThreadBtn").onclick = async () => {
   document.querySelectorAll("#modeBar .chip").forEach((btn) => {
     btn.addEventListener("click", () => applyMode(btn.dataset.mode));
   });
-  const qsMode = new URLSearchParams(window.location.search).get("mode");
-  applyMode(qsMode || localStorage.getItem("authTesterMode") || "all");
+  const q = new URLSearchParams(window.location.search);
+  const qsMode = q.get("mode");
+  const lockMode = q.get("lockMode") === "1";
+  LOCK_MODE = lockMode;
+  const initialMode = qsMode || localStorage.getItem("authTesterMode") || "all";
+  applyMode(initialMode);
+  if (lockMode && initialMode !== "all") {
+    $("modeBar").classList.add("hidden");
+    $("roleLinksBar").classList.add("hidden");
+    applyLockedRoleTweaks(initialMode);
+  }
   refreshFlowButtons();
 
   setRoleUI($("regRole").value);

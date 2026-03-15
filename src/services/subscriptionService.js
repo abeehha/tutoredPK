@@ -85,6 +85,32 @@ async function purchaseTutorSubscription(accountId, planType, requestedStartDate
 
     const tutorId = tutorResult.rows[0].tutor_id;
 
+    const activeSubscription = await client.query(
+      `
+      SELECT subscription_id, plan_type, start_at, end_at, start_date, end_date
+      FROM subscriptions
+      WHERE tutor_id = $1
+        AND is_active = TRUE
+        AND (
+          (end_at IS NOT NULL AND end_at > NOW()) OR
+          (end_at IS NULL AND end_date >= CURRENT_DATE)
+        )
+      ORDER BY COALESCE(start_at, start_date::timestamp) DESC
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [tutorId]
+    );
+
+    if (activeSubscription.rowCount > 0) {
+      throw new HttpError(
+        409,
+        "SUBSCRIPTION_ALREADY_ACTIVE",
+        "Tutor already has an active subscription. Wait for expiry before purchasing again.",
+        { active_subscription: activeSubscription.rows[0] }
+      );
+    }
+
     const academyMemberCheck = await client.query(
       `
       SELECT membership_id
@@ -215,6 +241,32 @@ async function purchaseAcademySubscription(accountId, requestedStartDate = null)
     }
 
     const academyId = academyResult.rows[0].academy_id;
+
+    const activeSubscription = await client.query(
+      `
+      SELECT subscription_id, plan_type, start_at, end_at, start_date, end_date
+      FROM subscriptions
+      WHERE academy_id = $1
+        AND is_active = TRUE
+        AND (
+          (end_at IS NOT NULL AND end_at > NOW()) OR
+          (end_at IS NULL AND end_date >= CURRENT_DATE)
+        )
+      ORDER BY COALESCE(start_at, start_date::timestamp) DESC
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [academyId]
+    );
+
+    if (activeSubscription.rowCount > 0) {
+      throw new HttpError(
+        409,
+        "SUBSCRIPTION_ALREADY_ACTIVE",
+        "Academy already has an active subscription. Wait for expiry before purchasing again.",
+        { active_subscription: activeSubscription.rows[0] }
+      );
+    }
 
     const walletResult = await client.query(
       `SELECT wallet_id, balance FROM wallets WHERE academy_id = $1 FOR UPDATE`,

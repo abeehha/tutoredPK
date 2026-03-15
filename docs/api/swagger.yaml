@@ -1,11 +1,11 @@
 openapi: 3.0.3
 info:
   title: TutoredPK Backend API
-  version: 1.0.0
-  description: Step 1-2 auth and RBAC endpoints.
+  version: 2.0.0
+  description: Complete Phase 2 backend API for authentication, authorization, subscriptions, bookings, academy enrollment, withdrawals, chat, reviews, and discovery.
 servers:
   - url: http://localhost:4001
-    description: Local
+    description: Local development
 components:
   securitySchemes:
     BearerAuth:
@@ -23,6 +23,7 @@ components:
         password:
           type: string
           minLength: 8
+          description: Must include uppercase, lowercase, number, and symbol.
         role:
           type: string
           enum: [student, tutor, academy]
@@ -59,6 +60,14 @@ components:
           type: integer
         owner_name:
           type: string
+      example:
+        email: student.demo@example.com
+        password: DemoPass1!
+        role: student
+        name: Student Demo
+        city: Lahore
+        country: Pakistan
+        phone: "03001234567"
     LoginRequest:
       type: object
       required: [email, password]
@@ -68,6 +77,41 @@ components:
           format: email
         password:
           type: string
+      example:
+        email: student.demo@example.com
+        password: DemoPass1!
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          type: string
+      example:
+        refresh_token: "<supabase_refresh_token>"
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+      example:
+        email: student.demo@example.com
+    ResetPasswordRequest:
+      type: object
+      required: [access_token, refresh_token, new_password]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        new_password:
+          type: string
+          minLength: 8
+          description: Must include uppercase, lowercase, number, and symbol.
+      example:
+        access_token: "<supabase_recovery_access_token>"
+        refresh_token: "<supabase_recovery_refresh_token>"
+        new_password: NewPass1!
     SubscriptionPurchaseRequest:
       type: object
       required: [plan_type]
@@ -78,6 +122,8 @@ components:
         start_date:
           type: string
           format: date
+      example:
+        plan_type: 1m
     StudentTopupRequest:
       type: object
       required: [amount]
@@ -85,6 +131,8 @@ components:
         amount:
           type: number
           minimum: 0.01
+      example:
+        amount: 3000
     BookSessionRequest:
       type: object
       required: [tutor_id, date, slot_id]
@@ -97,12 +145,18 @@ components:
         slot_id:
           type: string
           enum: [s1, s2, s3, s4]
+      example:
+        tutor_id: 41
+        date: "2026-03-20"
+        slot_id: s2
     ConfirmSessionRequest:
       type: object
       required: [confirmed]
       properties:
         confirmed:
           type: boolean
+      example:
+        confirmed: true
     WithdrawalRequest:
       type: object
       required: [amount, provider, account_title, account_number]
@@ -119,6 +173,12 @@ components:
           type: string
         destination_note:
           type: string
+      example:
+        amount: 500
+        provider: jazzcash
+        account_title: Tutor Demo
+        account_number: "03001234567"
+        destination_note: Monthly payout simulation
     WithdrawalReviewRequest:
       type: object
       required: [decision]
@@ -128,6 +188,9 @@ components:
           enum: [approved, rejected]
         review_note:
           type: string
+      example:
+        decision: approved
+        review_note: Approved by admin after review
     AcademyEnrollRequest:
       type: object
       required: [academy_id, course_id]
@@ -136,6 +199,9 @@ components:
           type: integer
         course_id:
           type: integer
+      example:
+        academy_id: 7
+        course_id: 15
     ChatSendRequest:
       type: object
       required: [receiver_account_id, content]
@@ -144,6 +210,9 @@ components:
           type: integer
         content:
           type: string
+      example:
+        receiver_account_id: 21
+        content: Hello, I want to discuss tomorrow's class.
     ReviewCreateRequest:
       type: object
       required: [booking_id, rating]
@@ -156,6 +225,10 @@ components:
           maximum: 5
         comment:
           type: string
+      example:
+        booking_id: 12
+        rating: 5
+        comment: Very helpful session.
     ErrorResponse:
       type: object
       properties:
@@ -171,6 +244,13 @@ components:
               type: string
             details:
               nullable: true
+      example:
+        success: false
+        error:
+          code: VALIDATION_ERROR
+          message: Invalid request payload
+          details:
+            - "\"email\" is required"
 paths:
   /api/v1/auth/register:
     post:
@@ -224,6 +304,8 @@ paths:
                 email:
                   type: string
                   format: email
+              example:
+                email: student.demo@example.com
       responses:
         '200':
           description: Verification email resent
@@ -233,6 +315,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/forgot-password:
+    post:
+      summary: Send password reset email via Supabase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: Reset email flow triggered
+        '400':
+          description: Validation error or reset email failure
+  /api/v1/auth/reset-password:
+    post:
+      summary: Reset password using Supabase recovery access and refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset completed
+        '400':
+          description: Validation error or invalid recovery session
   /api/v1/auth/me:
     get:
       summary: Get current user from token + local role profile
@@ -247,6 +357,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/auth/logout:
+    post:
+      summary: Logout current session and optionally revoke Supabase refresh token
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout accepted
+        '400':
+          description: Validation error or sign-out revoke failure
+        '401':
+          description: Missing or invalid token
   /api/v1/auth/rbac/student:
     get:
       summary: RBAC test route for student
@@ -308,7 +436,7 @@ paths:
         '403':
           description: Forbidden for non-tutor role
         '409':
-          description: Insufficient balance
+          description: Insufficient balance or active subscription already exists
   /api/v1/subscriptions/plans:
     get:
       summary: List available tutor subscription plans
@@ -329,7 +457,7 @@ paths:
           description: Forbidden for non-tutor role
   /api/v1/subscriptions/tutor/topup:
     post:
-      summary: Demo wallet top-up for tutor testing flow
+      summary: Top up tutor wallet
       security:
         - BearerAuth: []
       requestBody:
@@ -343,6 +471,8 @@ paths:
                 amount:
                   type: number
                   minimum: 0.01
+              example:
+                amount: 5000
       responses:
         '201':
           description: Wallet topped up
@@ -378,7 +508,7 @@ paths:
           description: Forbidden for non-academy role
   /api/v1/subscriptions/academy/topup:
     post:
-      summary: Demo top-up for academy wallet testing
+      summary: Top up academy wallet
       security:
         - BearerAuth: []
       requestBody:
@@ -392,6 +522,8 @@ paths:
                 amount:
                   type: number
                   minimum: 0.01
+              example:
+                amount: 25000
       responses:
         '201':
           description: Wallet topped up
@@ -410,7 +542,7 @@ paths:
         '201':
           description: Academy subscription purchased
         '409':
-          description: Insufficient balance
+          description: Insufficient balance or active subscription already exists
   /api/v1/subscriptions/academy/my:
     get:
       summary: Get academy wallet and subscription history
@@ -471,7 +603,7 @@ paths:
           description: Forbidden for non-student roles
   /api/v1/sessions/student/topup:
     post:
-      summary: Demo top-up for student wallet (testing)
+      summary: Top up student wallet
       security:
         - BearerAuth: []
       requestBody:
@@ -484,7 +616,7 @@ paths:
         '201':
           description: Wallet topped up
         '400':
-          description: Validation error
+          description: Validation error (including past session date/time)
         '401':
           description: Missing or invalid token
         '403':
@@ -553,6 +685,8 @@ paths:
           description: Forbidden or not booking owner
         '404':
           description: Booking/profile/wallet not found
+        '409':
+          description: Session not yet due for confirmation
   /api/v1/withdrawals/request:
     post:
       summary: Tutor requests simulated withdrawal to personal account destination
@@ -675,6 +809,18 @@ paths:
       responses:
         '200':
           description: Enrollments fetched
+  /api/v1/academies/academy/courses/seed-demo:
+    post:
+      summary: Seed starter academy courses
+      security:
+        - BearerAuth: []
+      responses:
+        '201':
+          description: Demo courses seeded (or already present)
+        '401':
+          description: Missing or invalid token
+        '403':
+          description: Forbidden for non-academy role
   /api/v1/chat/messages:
     post:
       summary: Send chat message (allowed only student-tutor or student-academy)

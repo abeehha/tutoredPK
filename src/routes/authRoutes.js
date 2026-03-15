@@ -8,7 +8,10 @@ const router = express.Router();
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 router.post("/resend-verification", authController.resendVerification);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/reset-password", authController.resetPassword);
 router.get("/me", auth, authController.me);
+router.post("/logout", auth, authController.logout);
 router.get("/rbac/student", auth, rbac("student"), (req, res) => {
   res.json({ success: true, data: { message: "student access granted", role: req.user.role } });
 });

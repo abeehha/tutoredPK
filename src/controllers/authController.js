@@ -1,11 +1,16 @@
 const Joi = require("joi");
+const { createClient } = require("@supabase/supabase-js");
 const pool = require("../config/db");
 const supabase = require("../config/supabase");
 const HttpError = require("../utils/httpError");
 
 const registerSchema = Joi.object({
   email: Joi.string().trim().lowercase().email({ tlds: { allow: true } }).required(),
-  password: Joi.string().min(8).max(128).required(),
+  password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/)
+    .required(),
   role: Joi.string().valid("student", "tutor", "academy").required(),
   name: Joi.string().trim().min(2).max(100).when("role", {
     is: Joi.valid("student", "tutor"),
@@ -64,6 +69,24 @@ const loginSchema = Joi.object({
 
 const resendVerificationSchema = Joi.object({
   email: Joi.string().trim().lowercase().email({ tlds: { allow: true } }).required(),
+});
+
+const logoutSchema = Joi.object({
+  refresh_token: Joi.string().trim().min(10).optional(),
+});
+
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email({ tlds: { allow: true } }).required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  access_token: Joi.string().trim().min(10).required(),
+  refresh_token: Joi.string().trim().min(10).required(),
+  new_password: Joi.string()
+    .min(8)
+    .max(128)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/)
+    .required(),
 });
 
 function normalizeNullable(value) {
@@ -381,6 +404,132 @@ exports.me = async (req, res) => {
       role: req.user.role,
       supabase_user_id: req.user.supabase_user_id,
       profile,
+    },
+  });
+};
+
+exports.logout = async (req, res) => {
+  const { error, value } = logoutSchema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid logout payload",
+      error.details.map((d) => d.message)
+    );
+  }
+
+  if (value.refresh_token) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+    const client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
+
+    const { error: setSessionError } = await client.auth.setSession({
+      access_token: req.auth_token,
+      refresh_token: value.refresh_token,
+    });
+
+    if (setSessionError) {
+      throw new HttpError(400, "SUPABASE_LOGOUT_FAILED", setSessionError.message);
+    }
+
+    const { error: signOutError } = await client.auth.signOut({ scope: "local" });
+    if (signOutError) {
+      throw new HttpError(400, "SUPABASE_LOGOUT_FAILED", signOutError.message);
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      message: "Logged out. Clear access token and refresh token from client storage.",
+      revoked: Boolean(value.refresh_token),
+    },
+  });
+};
+
+exports.forgotPassword = async (req, res) => {
+  const { error, value } = forgotPasswordSchema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid forgot-password payload",
+      error.details.map((d) => d.message)
+    );
+  }
+
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(value.email, {
+    redirectTo:
+      process.env.SUPABASE_PASSWORD_RESET_REDIRECT_TO ||
+      process.env.SUPABASE_EMAIL_REDIRECT_TO ||
+      "http://localhost:4001",
+  });
+
+  if (resetError) {
+    throw new HttpError(400, "PASSWORD_RESET_EMAIL_FAILED", resetError.message);
+  }
+
+  res.json({
+    success: true,
+    data: {
+      message: "If this email exists, password reset instructions have been sent.",
+    },
+  });
+};
+
+exports.resetPassword = async (req, res) => {
+  const { error, value } = resetPasswordSchema.validate(req.body || {}, { abortEarly: false, stripUnknown: true });
+  if (error) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "Invalid reset-password payload",
+      error.details.map((d) => d.message)
+    );
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  const { error: setSessionError } = await client.auth.setSession({
+    access_token: value.access_token,
+    refresh_token: value.refresh_token,
+  });
+
+  if (setSessionError) {
+    throw new HttpError(400, "RESET_SESSION_INVALID", setSessionError.message);
+  }
+
+  const { error: updateError } = await client.auth.updateUser({
+    password: value.new_password,
+  });
+
+  if (updateError) {
+    throw new HttpError(400, "PASSWORD_RESET_FAILED", updateError.message);
+  }
+
+  const { error: signOutError } = await client.auth.signOut({ scope: "local" });
+  if (signOutError) {
+    throw new HttpError(400, "PASSWORD_RESET_SIGNOUT_FAILED", signOutError.message);
+  }
+
+  res.json({
+    success: true,
+    data: {
+      message: "Password reset successful. Please login again.",
     },
   });
 };

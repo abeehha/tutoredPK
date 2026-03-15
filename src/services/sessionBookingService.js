@@ -158,6 +158,10 @@ async function bookTutorSession({ studentAccountId, tutorId, date, slotId }) {
     }
 
     const sessionDateTime = combineDateTime(date, slot.start_time);
+    const sessionTs = new Date(sessionDateTime);
+    if (Number.isNaN(sessionTs.getTime()) || sessionTs.getTime() <= Date.now()) {
+      throw new HttpError(400, "INVALID_SESSION_TIME", "Session date/time must be in the future");
+    }
 
     const conflict = await client.query(
       `
@@ -288,6 +292,11 @@ async function confirmSession({ accountId, role, bookingId, confirmed }) {
     }
 
     const setColumn = role === "student" ? "student_confirmed" : "tutor_confirmed";
+
+    const sessionTime = new Date(booking.session_datetime);
+    if (sessionTime.getTime() > Date.now()) {
+      throw new HttpError(409, "SESSION_NOT_YET_DUE", "Session confirmation is allowed only after session time");
+    }
 
     await client.query(
       `UPDATE bookings SET ${setColumn} = $2 WHERE booking_id = $1`,

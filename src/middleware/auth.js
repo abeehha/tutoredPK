@@ -39,6 +39,7 @@ module.exports = async function auth(req, res, next) {
     created_at: account.created_at,
     supabase_user_id: data.user.id,
   };
+  req.auth_token = token;
 
   next();
 };
