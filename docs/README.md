@@ -687,3 +687,8 @@ The full API is documented in `swagger.yaml`. The table below is a quick-referen
 From the `frontend/` directory:
 - `npm install` — install frontend dependencies
 - `npm run dev` — start frontend development server
+
+## Submission Structure Note
+
+This submission follows the required folder structure as closely as possible. Some documentation files are provided in `.docx` format instead of `.pdf`, and the backend entry file is `backend/src/index.js` instead of `server.js`. These differences do not affect project setup or evaluation.
+
